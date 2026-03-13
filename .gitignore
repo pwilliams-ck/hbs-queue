@@ -1,0 +1,18 @@
+# Environment variables
+.env
+.envrc
+
+# Tasklist
+docs/todo/
+
+# .DS_Store files
+.DS_Store
+
+# IDE files
+.idea
+.vscode
+.dccache
+
+# Compiled binary
+/cmd/hbsqueue/
+!/cmd/hbsqueue/

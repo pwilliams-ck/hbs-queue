@@ -1,4 +1,4 @@
-// Route surface:
+// Package httpapi Route surface:
 //
 //	GET  /ready         — readiness probe, pings DB (no auth)
 //	GET  /health        — build info + DB status (no auth)

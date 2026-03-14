@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
 	"testing"
 	"time"
 
@@ -16,14 +17,20 @@ import (
 func TestRun(t *testing.T) {
 	t.Parallel()
 
+	databaseURL := os.Getenv("DATABASE_URL")
+	if databaseURL == "" {
+		t.Skip("DATABASE_URL not set, skipping integration test")
+	}
+
 	port := freePort(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 
 	getenv := mockGetenv(map[string]string{
-		"PORT":    port,
-		"ENV":     "test",
-		"API_KEY": "test-key",
+		"PORT":         port,
+		"ENV":          "test",
+		"API_KEY":      "test-key",
+		"DATABASE_URL": databaseURL,
 	})
 
 	stdout := &bytes.Buffer{}
@@ -57,7 +64,7 @@ func TestRun(t *testing.T) {
 		}
 	})
 
-	t.Run("health returns version info", func(t *testing.T) {
+	t.Run("health returns version and db status", func(t *testing.T) {
 		resp, err := http.Get(baseURL + "/health")
 		if err != nil {
 			t.Fatalf("GET /health: %v", err)
@@ -66,6 +73,12 @@ func TestRun(t *testing.T) {
 
 		if resp.StatusCode != http.StatusOK {
 			t.Errorf("got status %d, want 200", resp.StatusCode)
+		}
+
+		var body httpapi.HealthResponse
+		json.NewDecoder(resp.Body).Decode(&body)
+		if body.Database != "up" {
+			t.Errorf("got database %q, want %q", body.Database, "up")
 		}
 	})
 

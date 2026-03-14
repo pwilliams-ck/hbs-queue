@@ -14,7 +14,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/riverqueue/river"
+
 	"github.com/CloudKey-io/hbs-queue/internal/config"
+	"github.com/CloudKey-io/hbs-queue/internal/db"
 	"github.com/CloudKey-io/hbs-queue/internal/httpapi"
 )
 
@@ -45,7 +48,30 @@ func run(
 	}
 	logger := slog.New(slog.NewJSONHandler(stdout, &slog.HandlerOptions{Level: logLevel}))
 
-	srv := httpapi.NewServer(logger, cfg)
+	// Database
+	pool, err := db.NewPool(ctx, cfg.DatabaseURL)
+	if err != nil {
+		return fmt.Errorf("db pool: %w", err)
+	}
+	defer pool.Close()
+
+	// Migrations — River's own tables, then our app schema.
+	if err := db.MigrateRiver(ctx, pool, logger); err != nil {
+		return fmt.Errorf("river migrations: %w", err)
+	}
+	if err := db.MigrateUp(ctx, pool, logger); err != nil {
+		return fmt.Errorf("app migrations: %w", err)
+	}
+
+	// River client — no workers registered yet, will be added in Task 5.
+	workers := river.NewWorkers()
+	riverClient, err := db.NewRiverClient(pool, workers)
+	if err != nil {
+		return fmt.Errorf("river client: %w", err)
+	}
+
+	// Server
+	srv := httpapi.NewServer(logger, cfg, pool, riverClient)
 
 	httpServer := &http.Server{
 		Addr:              ":" + cfg.Port,
@@ -77,8 +103,16 @@ func run(
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer shutdownCancel()
 
+	// Shutdown order matters:
+	// 1. HTTP — stop accepting new requests, drain in-flight
+	// 2. River — stop fetching jobs, let active jobs finish
+	// 3. Pool — closed via defer above after everything else is done
 	if err := httpServer.Shutdown(shutdownCtx); err != nil {
-		return fmt.Errorf("http shutdown: %w", err)
+		logger.Error("http shutdown error", "err", err)
+	}
+
+	if err := riverClient.Stop(shutdownCtx); err != nil {
+		logger.Error("river shutdown error", "err", err)
 	}
 
 	logger.Info("shutdown complete")

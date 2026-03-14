@@ -15,6 +15,7 @@ type HealthResponse struct {
 	Version   string `json:"version"`
 	Commit    string `json:"commit"`
 	BuildTime string `json:"build_time"`
+	Database  string `json:"database"`
 }
 
 // --- Echo ---

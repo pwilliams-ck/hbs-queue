@@ -58,7 +58,9 @@ docker compose down         # stop services
 - Swagger UI: `localhost:8081`
 - `DATABASE_URL` format: `postgres://hbsqueue:dev-password@localhost:5432/hbsqueue_dev?sslmode=disable`
 
-Migrations run programmatically via River — no CLI tool required.
+Migrations run programmatically at startup — no CLI tool required. River
+migrates its own tables, then app migrations (`internal/db/migrations/`) run
+in sorted order using embedded SQL.
 
 ## Development
 
@@ -83,7 +85,7 @@ cmd/hbsqueue/        main + run, integration tests
 internal/
   config/            Config loaded from env via getenv func
   httpapi/           HTTP server, routes, handlers, middleware
-  db/                (future) pgxpool + River client
+  db/                pgxpool, River client, migrations
   clients/           (future) VCD, Zerto, Keycloak, HostBill, AD
   jobs/              (future) River job workers
   workflow/          (future) step runner with JSONB accumulator
@@ -98,6 +100,26 @@ See [`docs/openapi.yaml`](docs/openapi.yaml) for the full specification.
 
 | Method | Path              | Auth    | Description       |
 |--------|-------------------|---------|-------------------|
-| GET    | `/ready`          | none    | Readiness probe   |
-| GET    | `/health`         | none    | Build/version info|
-| POST   | `/api/v1/echo`    | API key | Echo test         |
+| GET    | `/ready`          | none    | Readiness probe (pings DB) |
+| GET    | `/health`         | none    | Build info + DB status     |
+| POST   | `/api/v1/echo`    | API key | Echo test                  |
+
+### Example responses
+
+**GET /ready**
+```json
+{"status":"ok"}
+```
+
+**GET /health**
+```json
+{"status":"healthy","version":"dev","commit":"none","build_time":"unknown","database":"up"}
+```
+
+### Graceful shutdown
+
+On SIGINT/SIGTERM the service shuts down in order:
+
+1. **HTTP** — stop accepting new requests, drain in-flight
+2. **River** — stop fetching jobs, let active workers finish
+3. **Pool** — close database connections

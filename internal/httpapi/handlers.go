@@ -4,30 +4,41 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/CloudKey-io/hbs-queue/internal/config"
 )
 
 // handleReady returns 200 when the service can accept traffic.
-// Used by load balancers and orchestrators as a readiness probe.
-func handleReady() http.Handler {
+// The DB is pinged on every request — if it fails, the service
+// reports not ready so load balancers stop sending traffic.
+func handleReady(pool *pgxpool.Pool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Future: add pool.Ping(r.Context()) check
+		if err := pool.Ping(r.Context()); err != nil {
+			encode(w, r, http.StatusServiceUnavailable, ReadyResponse{Status: "unavailable"})
+			return
+		}
 		encode(w, r, http.StatusOK, ReadyResponse{Status: "ok"})
 	})
 }
 
-// handleHealth returns build and version info for diagnostics.
-// The response is built once at handler creation time.
-func handleHealth(cfg *config.Config) http.Handler {
-	resp := HealthResponse{
-		Status:    "healthy",
-		Version:   cfg.Version,
-		Commit:    cfg.Commit,
-		BuildTime: cfg.BuildTime,
-	}
-
+// handleHealth returns build info and database status for diagnostics.
+// Build info is computed once at handler creation time; DB status is
+// checked per request.
+func handleHealth(cfg *config.Config, pool *pgxpool.Pool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		encode(w, r, http.StatusOK, resp)
+		dbStatus := "up"
+		if err := pool.Ping(r.Context()); err != nil {
+			dbStatus = "down"
+		}
+
+		encode(w, r, http.StatusOK, HealthResponse{
+			Status:    "healthy",
+			Version:   cfg.Version,
+			Commit:    cfg.Commit,
+			BuildTime: cfg.BuildTime,
+			Database:  dbStatus,
+		})
 	})
 }
 

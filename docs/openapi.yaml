@@ -12,7 +12,7 @@ paths:
   /ready:
     get:
       summary: Readiness probe
-      description: Returns 200 when the service can accept traffic. Used by load balancers and orchestrators.
+      description: Returns 200 when the service can accept traffic. Pings the database on every request.
       operationId: getReady
       responses:
         "200":
@@ -21,11 +21,17 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ReadyResponse"
+        "503":
+          description: Service is not ready (database unreachable).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadyResponse"
 
   /health:
     get:
       summary: Health check
-      description: Returns build and version info for diagnostics.
+      description: Returns build info and database status for diagnostics.
       operationId: getHealth
       responses:
         "200":
@@ -100,7 +106,7 @@ components:
 
     HealthResponse:
       type: object
-      required: [status, version, commit, build_time]
+      required: [status, version, commit, build_time, database]
       properties:
         status:
           type: string
@@ -114,6 +120,10 @@ components:
         build_time:
           type: string
           example: "2026-03-14T00:01:30Z"
+        database:
+          type: string
+          enum: [up, down]
+          example: up
 
     EchoRequest:
       type: object

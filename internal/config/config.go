@@ -37,12 +37,12 @@ type Config struct {
 // The getenv function is typically os.Getenv but can be substituted in tests.
 func Load(getenv func(string) string) *Config {
 	return &Config{
-		Port:      envOr(getenv, "PORT", "8080"),
-		Env:       envOr(getenv, "ENV", "dev"),
-		APIKey:    getenv("API_KEY"),
-		Version:   Version,
-		Commit:    Commit,
-		BuildTime: BuildTime,
+		Port:        envOr(getenv, "PORT", "8080"),
+		Env:         envOr(getenv, "ENV", "dev"),
+		APIKey:      getenv("API_KEY"),
+		Version:     Version,
+		Commit:      Commit,
+		BuildTime:   BuildTime,
 		DatabaseURL: getenv("DATABASE_URL"),
 	}
 }

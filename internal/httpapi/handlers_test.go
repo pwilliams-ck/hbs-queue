@@ -9,58 +9,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-
-	"github.com/CloudKey-io/hbs-queue/internal/config"
 )
-
-func TestHandleReady(t *testing.T) {
-	t.Parallel()
-
-	handler := handleReady()
-
-	req := httptest.NewRequest(http.MethodGet, "/ready", nil)
-	rec := httptest.NewRecorder()
-
-	handler.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Errorf("got %d, want 200", rec.Code)
-	}
-
-	var resp ReadyResponse
-	json.NewDecoder(rec.Body).Decode(&resp)
-	if resp.Status != "ok" {
-		t.Errorf("got %q, want %q", resp.Status, "ok")
-	}
-}
-
-func TestHandleHealth(t *testing.T) {
-	t.Parallel()
-
-	cfg := &config.Config{
-		Version:   "1.0.0",
-		Commit:    "abc123",
-		BuildTime: "2024-01-01",
-	}
-
-	handler := handleHealth(cfg)
-
-	req := httptest.NewRequest(http.MethodGet, "/health", nil)
-	rec := httptest.NewRecorder()
-
-	handler.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Errorf("got %d, want 200", rec.Code)
-	}
-
-	var resp HealthResponse
-	json.NewDecoder(rec.Body).Decode(&resp)
-
-	if resp.Version != "1.0.0" {
-		t.Errorf("got version %q, want %q", resp.Version, "1.0.0")
-	}
-}
 
 func TestHandleEcho(t *testing.T) {
 	t.Parallel()

@@ -14,5 +14,4 @@ docs/todo/
 .dccache
 
 # Compiled binary
-/cmd/hbsqueue/
-!/cmd/hbsqueue/
+bin

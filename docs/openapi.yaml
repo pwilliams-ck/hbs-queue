@@ -1,0 +1,151 @@
+openapi: "3.1.0"
+info:
+  title: hbs-queue
+  description: HostBill Queue Service — orchestrates tenant onboarding/offboarding workflows.
+  version: 0.1.0
+
+servers:
+  - url: http://localhost:8080
+    description: Local development
+
+paths:
+  /ready:
+    get:
+      summary: Readiness probe
+      description: Returns 200 when the service can accept traffic. Used by load balancers and orchestrators.
+      operationId: getReady
+      responses:
+        "200":
+          description: Service is ready.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadyResponse"
+
+  /health:
+    get:
+      summary: Health check
+      description: Returns build and version info for diagnostics.
+      operationId: getHealth
+      responses:
+        "200":
+          description: Service is healthy.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /api/v1/echo:
+    post:
+      summary: Echo
+      description: Echoes the message back. Demonstrates the full request lifecycle (decode, validate, respond).
+      operationId: postEcho
+      security:
+        - apiKey: []
+      parameters:
+        - name: X-Request-ID
+          in: header
+          description: Optional trace ID. If omitted, the server generates one.
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EchoRequest"
+      responses:
+        "200":
+          description: Message echoed.
+          headers:
+            X-Request-ID:
+              description: Request trace ID.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EchoResponse"
+        "400":
+          description: Malformed JSON.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Missing or invalid API key.
+        "422":
+          description: Validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      name: X-API-Key
+      in: header
+
+  schemas:
+    ReadyResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          example: ok
+
+    HealthResponse:
+      type: object
+      required: [status, version, commit, build_time]
+      properties:
+        status:
+          type: string
+          example: healthy
+        version:
+          type: string
+          example: v0.1.0
+        commit:
+          type: string
+          example: 4c90260
+        build_time:
+          type: string
+          example: "2026-03-14T00:01:30Z"
+
+    EchoRequest:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          minLength: 1
+          maxLength: 1000
+          example: hello
+
+    EchoResponse:
+      type: object
+      required: [echo, request_id]
+      properties:
+        echo:
+          type: string
+          example: hello
+        request_id:
+          type: string
+          example: a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          example: validation failed
+        problems:
+          type: object
+          additionalProperties:
+            type: string
+          example:
+            message: required

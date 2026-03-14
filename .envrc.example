@@ -1,0 +1,7 @@
+# Copy to .envrc, then: direnv allow
+export PORT=8080
+export ENV=dev
+export API_KEY=dev-secret-key
+
+# Future
+# export DATABASE_URL=postgres://localhost:5432/hbsqueue_dev?sslmode=disable

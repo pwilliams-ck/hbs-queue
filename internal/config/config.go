@@ -29,8 +29,8 @@ type Config struct {
 	// BuildTime is the UTC timestamp of the build.
 	BuildTime string
 
-	// Future
-	// DatabaseURL string
+	// DatabaseURL is the Postgres connection string.
+	DatabaseURL string
 }
 
 // Load returns a Config populated from environment variables.
@@ -43,7 +43,7 @@ func Load(getenv func(string) string) *Config {
 		Version:   Version,
 		Commit:    Commit,
 		BuildTime: BuildTime,
-		// DatabaseURL: getenv("DATABASE_URL"),
+		DatabaseURL: getenv("DATABASE_URL"),
 	}
 }
 

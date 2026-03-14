@@ -3,5 +3,4 @@ export PORT=8080
 export ENV=dev
 export API_KEY=dev-secret-key
 
-# Future
-# export DATABASE_URL=postgres://localhost:5432/hbsqueue_dev?sslmode=disable
+export DATABASE_URL=postgres://hbsqueue:dev-password@localhost:5432/hbsqueue_dev?sslmode=disable

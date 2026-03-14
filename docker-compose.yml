@@ -1,0 +1,28 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: hbsqueue
+      POSTGRES_PASSWORD: dev-password
+      POSTGRES_DB: hbsqueue_dev
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hbsqueue -d hbsqueue_dev"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  swagger-ui:
+    image: swaggerapi/swagger-ui
+    ports:
+      - "8081:8080"
+    environment:
+      SWAGGER_JSON: /spec/openapi.yaml
+    volumes:
+      - ./docs:/spec
+
+volumes:
+  pgdata:

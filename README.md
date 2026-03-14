@@ -8,7 +8,8 @@ Built on [River](https://riverqueue.com), a Postgres-backed job queue for Go.
 ## Requirements
 
 - Go 1.26+
-- PostgreSQL 18+ (future — not required yet)
+- PostgreSQL 18+
+- Docker Compose
 
 ## Getting Started
 
@@ -17,6 +18,7 @@ git clone https://github.com/CloudKey-io/hbs-queue.git
 cd hbs-queue
 cp .envrc.example .envrc
 direnv allow  # or: source .envrc
+docker compose up -d
 make run
 ```
 
@@ -40,7 +42,23 @@ All configuration is via environment variables.
 | `PORT`         | `8080`  | HTTP listen port               |
 | `ENV`          | `dev`   | Environment (`dev` / `prod`)   |
 | `API_KEY`      | —       | Required for `/api/v1/*` routes|
-| `DATABASE_URL` | —       | (future) Postgres connection   |
+| `DATABASE_URL` | —       | Postgres connection string     |
+
+## Docker Compose
+
+Postgres and Swagger UI run in Docker Compose:
+
+```sh
+docker compose up -d        # start Postgres + Swagger UI
+docker compose ps           # check status
+docker compose down         # stop services
+```
+
+- Postgres: `localhost:5432` (user: `hbsqueue`, db: `hbsqueue_dev`)
+- Swagger UI: `localhost:8081`
+- `DATABASE_URL` format: `postgres://hbsqueue:dev-password@localhost:5432/hbsqueue_dev?sslmode=disable`
+
+Migrations run programmatically via River — no CLI tool required.
 
 ## Development
 

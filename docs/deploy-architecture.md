@@ -9,11 +9,13 @@ This document describes how the service is built, deployed, and operated.
 
 ## Table of Contents
 
+- [Overview Diagram](#overview-diagram)
 - [Infrastructure](#infrastructure)
 - [Environments](#environments)
   - [Promotion Flow](#promotion-flow)
+- [Branch Protection](#branch-protection)
 - [CI/CD Flow](#cicd-flow)
-  - [Push to Main (Dev Auto-Deploy)](#push-to-main-dev-auto-deploy)
+  - [Merge to Main (Dev Auto-Deploy)](#merge-to-main-dev-auto-deploy)
   - [Tag vX.X.X (Production Release)](#tag-vxxx-production-release)
 - [Blue/Green App Deploys](#bluegreen-app-deploys)
   - [Deploy Sequence](#deploy-sequence-scriptsbg-deploysh)
@@ -33,6 +35,8 @@ This document describes how the service is built, deployed, and operated.
 - [Scaling to Docker Swarm](#scaling-to-docker-swarm)
   - [Additional Firewall Rules for Multi-Node Swarm](#additional-firewall-rules-for-multi-node-swarm)
 - [Secrets](#secrets)
+  - [CI Secrets (GitHub Actions)](#ci-secrets-github-actions)
+  - [Runtime Secrets (Docker Swarm)](#runtime-secrets-docker-swarm)
 - [Connecting to Services on docker01](#connecting-to-services-on-docker01)
 - [Rollback](#rollback)
 - [Troubleshooting](#troubleshooting)
@@ -42,10 +46,11 @@ This document describes how the service is built, deployed, and operated.
   - [Connect to Postgres Manually](#connect-to-postgres-manually)
   - [CI Pipeline Failed](#ci-pipeline-failed)
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="deploy-architecture-dark.svg">
-  <img src="deploy-architecture-light.svg" alt="Deployment Architecture">
-</picture>
+## Overview Diagram
+
+<p align="center">
+  <img src="deploy-architecture.svg" alt="Deployment Architecture" width="600">
+</p>
 
 ## Infrastructure
 
@@ -85,9 +90,24 @@ Tagged releases build a versioned image and push it to GHCR. Prod deployment is
 not automated yet — when a prod host is provisioned on the `10.25` network, the
 tag workflow will be extended to SSH and deploy there.
 
+## Branch Protection
+
+The `main` branch has protection rules enforced in GitHub:
+
+- **No direct pushes** — all changes go through pull requests. This includes
+  force pushes (`--force`, `--force-with-lease`), which are blocked entirely.
+- **Required reviews** — PRs require at least one approval before merging.
+- **Required status checks** — CI (tests + lint) must pass before a PR can be
+  merged.
+- **No bypass** — these rules apply to everyone, including admins.
+
+This means code only reaches `main` through a reviewed, passing PR. The CI/CD
+pipeline triggers on merge, not on push — there is no way to deploy untested or
+unreviewed code.
+
 ## CI/CD Flow
 
-### Push to `main` (Dev Auto-Deploy)
+### Merge to `main` (Dev Auto-Deploy)
 
 1. ci01 runner picks up the job
 2. Runs tests and linter
@@ -280,19 +300,53 @@ replaced by Swarm's built-in routing mesh if desired.
 
 ## Secrets
 
-Stored in GitHub repo settings under **Settings > Secrets > Actions**:
+Secrets live in two places, for two different purposes.
+
+### CI Secrets (GitHub Actions)
+
+Stored in GitHub repo settings under **Settings > Secrets > Actions**. These are
+used during build and deploy — they never end up in the container image.
 
 | Secret             | Purpose                                 |
 | ------------------ | --------------------------------------- |
 | `DOCKER01_HOST`    | SSH target for deploys                  |
 | `DOCKER01_SSH_KEY` | Private key for deploy user on docker01 |
 | `DOCKER01_USER`    | Deploy user on docker01                 |
-| `API_KEY`          | App API key                             |
-| `DATABASE_URL`     | Postgres connection string on docker01  |
 
-Secrets are scoped per environment. When prod is added, a separate set of
-secrets will be created (e.g., `PROD_HOST`, `PROD_SSH_KEY`, `PROD_API_KEY`).
-Never reuse dev secrets in prod.
+Scoped per environment. When prod is added, a separate set will be created
+(e.g., `PROD_HOST`, `PROD_SSH_KEY`). Never reuse dev secrets in prod.
+
+### Runtime Secrets (Docker Swarm)
+
+Application secrets (`API_KEY`, `DATABASE_URL`, etc.) are stored as Docker Swarm
+secrets — encrypted at rest in the Raft log, mounted as files at
+`/run/secrets/<name>`, and never visible in `docker inspect` or process
+listings. No plaintext `.env` files on disk.
+
+```sh
+# Create secrets on docker01 (swarm manager):
+echo "the-actual-api-key" | docker secret create api_key -
+echo "postgres://user:pass@postgres:5432/hbsqueue?sslmode=disable" | docker secret create database_url -
+```
+
+| Secret         | Swarm Secret Name | Mount Path                  |
+| -------------- | ----------------- | --------------------------- |
+| `API_KEY`      | `api_key`         | `/run/secrets/api_key`      |
+| `DATABASE_URL` | `database_url`    | `/run/secrets/database_url` |
+
+The app reads config from environment variables, so an entrypoint script bridges
+the gap — it loads secret files into env vars before starting the binary:
+
+```sh
+#!/bin/sh
+# docker-entrypoint.sh
+export API_KEY=$(cat /run/secrets/api_key)
+export DATABASE_URL=$(cat /run/secrets/database_url)
+exec /usr/local/bin/hbsqueue "$@"
+```
+
+Non-sensitive config (`PORT`, `ENV`) stays in the compose file as regular
+environment variables — no need to put everything in secrets.
 
 ## Connecting to Services on docker01
 

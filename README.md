@@ -1,7 +1,7 @@
 # hbsqueue
 
-HostBill Service Queue — orchestrates tenant provisioning and management
-workflows across VCD, Zerto, Keycloak, HostBill, and Active Directory.
+HostBill Service Queue orchestrates tenant provisioning and management workflows
+across VCD, Zerto, Keycloak, HostBill, and Active Directory.
 
 Built on [River](https://riverqueue.com), a Postgres-backed job queue for Go.
 
@@ -15,6 +15,8 @@ Built on [River](https://riverqueue.com), a Postgres-backed job queue for Go.
 - [Project Layout](#project-layout)
 - [API](#api)
   - [Example Responses](#example-responses)
+    - [GET `/ready`](#get-ready)
+    - [GET `/health`](#get-health)
 - [Deployment](#deployment)
   - [Graceful Shutdown](#graceful-shutdown)
 
@@ -50,12 +52,12 @@ curl -X POST localhost:8080/api/v1/echo \
 
 All configuration is via environment variables.
 
-| Variable       | Default | Description                    |
-|----------------|---------|--------------------------------|
-| `PORT`         | `8080`  | HTTP listen port               |
-| `ENV`          | `dev`   | Environment (`dev` / `prod`)   |
-| `API_KEY`      | —       | Required for `/api/v1/*` routes|
-| `DATABASE_URL` | —       | Postgres connection string     |
+| Variable       | Default | Description                     |
+| -------------- | ------- | ------------------------------- |
+| `PORT`         | `8080`  | HTTP listen port                |
+| `ENV`          | `dev`   | Environment (`dev` / `prod`)    |
+| `API_KEY`      |         | Required for `/api/v1/*` routes |
+| `DATABASE_URL` |         | Postgres connection string      |
 
 ## Docker Compose
 
@@ -69,11 +71,12 @@ docker compose down         # stop services
 
 - Postgres: `localhost:5432` (user: `hbsqueue`, db: `hbsqueue_dev`)
 - Swagger UI: `localhost:8081`
-- `DATABASE_URL` format: `postgres://hbsqueue:dev-password@localhost:5432/hbsqueue_dev?sslmode=disable`
+- `DATABASE_URL` format:
+  `postgres://hbsqueue:dev-password@localhost:5432/hbsqueue_dev?sslmode=disable`
 
-Migrations run programmatically at startup — no CLI tool required. River
-migrates its own tables, then app migrations (`internal/db/migrations/`) run
-in sorted order using embedded SQL.
+Migrations run programmatically at startup, no CLI tool required. River migrates
+its own tables, then app migrations (`internal/db/migrations/`) run in sorted
+order using embedded SQL.
 
 ## Development
 
@@ -111,22 +114,30 @@ docs/
 
 See [`docs/openapi.yaml`](docs/openapi.yaml) for the full specification.
 
-| Method | Path              | Auth    | Description       |
-|--------|-------------------|---------|-------------------|
-| GET    | `/ready`          | none    | Readiness probe (pings DB) |
-| GET    | `/health`         | none    | Build info + DB status     |
-| POST   | `/api/v1/echo`    | API key | Echo test                  |
+| Method | Path           | Auth    | Description                |
+| ------ | -------------- | ------- | -------------------------- |
+| GET    | `/ready`       | none    | Readiness probe (pings DB) |
+| GET    | `/health`      | none    | Build info + DB status     |
+| POST   | `/api/v1/echo` | API key | Echo test                  |
 
-### Example responses
+### Example Responses
 
-**GET /ready**
+#### GET `/ready`
+
 ```json
-{"status":"ok"}
+{ "status": "ok" }
 ```
 
-**GET /health**
+#### GET `/health`
+
 ```json
-{"status":"healthy","version":"dev","commit":"none","build_time":"unknown","database":"up"}
+{
+  "status": "healthy",
+  "version": "dev",
+  "commit": "none",
+  "build_time": "unknown",
+  "database": "up"
+}
 ```
 
 ## Deployment
@@ -135,10 +146,10 @@ See [docs/deploy-architecture.md](docs/deploy-architecture.md) for the full
 deployment architecture, CI/CD pipeline, blue/green deploys, backup strategy,
 network topology, and troubleshooting.
 
-### Graceful shutdown
+### Graceful Shutdown
 
-On SIGINT/SIGTERM the service shuts down in order:
+On `SIGINT`/`SIGTERM` the service shuts down in order:
 
-1. **HTTP** — stop accepting new requests, drain in-flight
-2. **River** — stop fetching jobs, let active workers finish
-3. **Pool** — close database connections
+1. **HTTP**: stop accepting new requests, drain in-flight
+2. **River**: stop fetching jobs, let active workers finish
+3. **Pool**: close database connections

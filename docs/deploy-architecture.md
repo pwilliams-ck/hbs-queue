@@ -21,7 +21,6 @@ This document describes how the service is built, deployed, and operated.
   - [Deploy Sequence](#deploy-sequence-scriptsbg-deploysh)
   - [Check Status](#check-status)
 - [Database](#database)
-  - [Why Not Blue/Green on the Database?](#why-not-bluegreen-on-the-database)
 - [Backups (3-2-1-1-0)](#backups-3-2-1-1-0)
   - [What's Implemented Now](#whats-implemented-now)
   - [What's Planned (Future)](#whats-planned-future)
@@ -64,8 +63,8 @@ This document describes how the service is built, deployed, and operated.
 ## Environments
 
 Dev and prod are on **physically separate networks in different datacenters**.
-This is intentional — a misconfigured dev environment cannot reach prod data,
-and destructive testing in dev carries zero risk to production.
+This is intentional, a misconfigured dev environment cannot reach prod data, and
+destructive testing in dev carries zero risk to production.
 
 | Environment | Network        | Hosts                                  | Deploys via     |
 | ----------- | -------------- | -------------------------------------- | --------------- |
@@ -87,23 +86,23 @@ feature branch → PR → merge to main → auto-deploy to dev (10.42)
 ```
 
 Tagged releases build a versioned image and push it to GHCR. Prod deployment is
-not automated yet — when a prod host is provisioned on the `10.25` network, the
-tag workflow will be extended to SSH and deploy there.
+not automated yet when a prod host is provisioned on the `10.25.0.0/16` network,
+the tag workflow will be extended to SSH and deploy there.
 
 ## Branch Protection
 
 The `main` branch has protection rules enforced in GitHub:
 
-- **No direct pushes** — all changes go through pull requests. This includes
+- **No direct pushes** - all changes go through pull requests. This includes
   force pushes (`--force`, `--force-with-lease`), which are blocked entirely.
-- **Required reviews** — PRs require at least one approval before merging.
-- **Required status checks** — CI (tests + lint) must pass before a PR can be
+- **Required reviews** - PRs require at least one approval before merging.
+- **Required status checks** - CI (tests + lint) must pass before a PR can be
   merged.
-- **No bypass** — these rules apply to everyone, including admins.
+- **No bypass** - these rules apply to everyone, including admins.
 
 This means code only reaches `main` through a reviewed, passing PR. The CI/CD
-pipeline triggers on merge, not on push — there is no way to deploy untested or
-unreviewed code.
+pipeline triggers on merge, not on push. There is no way to deploy untested or
+un-reviewed code.
 
 ## CI/CD Flow
 
@@ -159,21 +158,8 @@ Shows which slot is active and the health of both containers.
 ## Database
 
 Single Postgres 18 instance on docker01 with a named Docker volume. Migrations
-run programmatically at app startup — River migrates its own tables, then app
+run programmatically at app startup. River migrates its own tables, then app
 migrations (`internal/db/migrations/`) run in sorted order.
-
-### Why Not Blue/Green on the Database?
-
-The app is stateless; the database is not. Running two Postgres instances
-introduces data sync complexity (replication or write-freezes) that isn't
-justified at this scale. Instead:
-
-- Write backward-compatible migrations (add columns, don't rename/drop)
-- Run `pg_dump` before every tagged release
-- Restore from backup if a migration goes wrong
-
-If zero-downtime schema changes on large datasets become necessary later, tools
-like `pgroll` or logical replication are the right path — not dual databases.
 
 ## Backups (3-2-1-1-0)
 
@@ -189,7 +175,7 @@ immutable, 0 unverified backups.
 Every backup is **restore-tested** before being copied anywhere. The script
 restores into a temporary database, runs a sanity check, then drops it. If
 verification fails, the dump is flagged and not propagated. This is the most
-valuable part of the strategy — without it, you could be backing up corrupted
+valuable part of the strategy, without it, you could be backing up corrupted
 dumps for weeks without knowing.
 
 ### What's Planned (Future)
@@ -273,8 +259,7 @@ connect via Docker's internal network. To connect manually for debugging, use
 
 Prod hosts will be on `10.25.0.0/16`. The same firewall rules apply — the prod
 Docker host needs outbound HTTPS to `ghcr.io` and inbound SSH from whatever runs
-the prod deploy (could be ci01 if it has cross-network access, or a separate
-runner on the prod network).
+the prod deploy (likely another ci01 for prod like in dev).
 
 ## Scaling to Docker Swarm
 
@@ -305,7 +290,7 @@ Secrets live in two places, for two different purposes.
 ### CI Secrets (GitHub Actions)
 
 Stored in GitHub repo settings under **Settings > Secrets > Actions**. These are
-used during build and deploy — they never end up in the container image.
+used during build and deploy, they never end up in the container image.
 
 | Secret             | Purpose                                 |
 | ------------------ | --------------------------------------- |
@@ -319,7 +304,7 @@ Scoped per environment. When prod is added, a separate set will be created
 ### Runtime Secrets (Docker Swarm)
 
 Application secrets (`API_KEY`, `DATABASE_URL`, etc.) are stored as Docker Swarm
-secrets — encrypted at rest in the Raft log, mounted as files at
+secrets and encrypted at rest in the Raft log, mounted as files at
 `/run/secrets/<name>`, and never visible in `docker inspect` or process
 listings. No plaintext `.env` files on disk.
 
@@ -334,8 +319,8 @@ echo "postgres://user:pass@postgres:5432/hbsqueue?sslmode=disable" | docker secr
 | `API_KEY`      | `api_key`         | `/run/secrets/api_key`      |
 | `DATABASE_URL` | `database_url`    | `/run/secrets/database_url` |
 
-The app reads config from environment variables, so an entrypoint script bridges
-the gap — it loads secret files into env vars before starting the binary:
+The app reads config from environment variables, so an entry point script
+bridges the gap it loads secret files into env vars before starting the binary:
 
 ```sh
 #!/bin/sh
@@ -346,7 +331,7 @@ exec /usr/local/bin/hbsqueue "$@"
 ```
 
 Non-sensitive config (`PORT`, `ENV`) stays in the compose file as regular
-environment variables — no need to put everything in secrets.
+environment variables, no need to put everything in secrets.
 
 ## Connecting to Services on docker01
 
@@ -415,6 +400,6 @@ docker exec -it <postgres-container> psql -U hbsqueue -d hbsqueue_dev
 Check the GitHub Actions run at `github.com/CloudKey-io/hbs-queue/actions`.
 Common causes:
 
-- Test failure — fix the code, push again
-- GHCR auth — check that the `GITHUB_TOKEN` has `packages:write` scope
-- SSH to docker01 failed — check `DOCKER01_SSH_KEY` secret and firewall rules
+- Test failure: fix the code, push again
+- GHCR auth: check that the `GITHUB_TOKEN` has `packages:write` scope
+- SSH to docker01 failed: check `DOCKER01_SSH_KEY` secret and firewall rules

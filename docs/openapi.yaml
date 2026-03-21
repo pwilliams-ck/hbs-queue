@@ -1,7 +1,7 @@
 openapi: "3.1.0"
 info:
   title: hbs-queue
-  description: HostBill Queue Service — orchestrates tenant onboarding/offboarding workflows.
+  description: HostBill Queue Service - orchestrates tenant onboarding/offboarding workflows.
   version: 0.1.0
 
 servers:

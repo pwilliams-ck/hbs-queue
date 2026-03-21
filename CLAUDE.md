@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **hbs-queue** is a HostBill Queue Service (Go) that orchestrates customer onboarding/offboarding workflows across five external platforms: VCD, Zerto, Keycloak, HostBill, and Active Directory. It uses [River](https://riverqueue.com) as a Postgres-backed job queue.
 
-The project is early-stage — currently at Task 1 (init/scaffold). Code examples and target architecture are documented in `docs/todo/code-examples.md` and `docs/todo/README.md`. Follow those patterns when building new features.
+The project is early-stage - currently at Task 1 (init/scaffold). Code examples and target architecture are documented in `docs/todo/code-examples.md` and `docs/todo/README.md`. Follow those patterns when building new features.
 
 ## Build & Dev Commands
 

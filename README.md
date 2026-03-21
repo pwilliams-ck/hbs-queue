@@ -5,6 +5,19 @@ workflows across VCD, Zerto, Keycloak, HostBill, and Active Directory.
 
 Built on [River](https://riverqueue.com), a Postgres-backed job queue for Go.
 
+## Table of Contents
+
+- [Requirements](#requirements)
+- [Getting Started](#getting-started)
+- [Configuration](#configuration)
+- [Docker Compose](#docker-compose)
+- [Development](#development)
+- [Project Layout](#project-layout)
+- [API](#api)
+  - [Example Responses](#example-responses)
+- [Deployment](#deployment)
+  - [Graceful Shutdown](#graceful-shutdown)
+
 ## Requirements
 
 - Go 1.26+
@@ -115,6 +128,12 @@ See [`docs/openapi.yaml`](docs/openapi.yaml) for the full specification.
 ```json
 {"status":"healthy","version":"dev","commit":"none","build_time":"unknown","database":"up"}
 ```
+
+## Deployment
+
+See [docs/deploy-architecture.md](docs/deploy-architecture.md) for the full
+deployment architecture, CI/CD pipeline, blue/green deploys, backup strategy,
+network topology, and troubleshooting.
 
 ### Graceful shutdown
 

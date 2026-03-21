@@ -43,8 +43,12 @@ func MigrateRiver(ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger) 
 		return fmt.Errorf("river migrate: %w", err)
 	}
 
-	for _, v := range res.Versions {
-		logger.Info("river migration applied", "version", v.Version)
+	if len(res.Versions) > 0 {
+		for _, v := range res.Versions {
+			logger.Info("river migration applied", "version", v.Version)
+		}
+	} else {
+		logger.Debug("river migrations up to date")
 	}
 
 	return nil

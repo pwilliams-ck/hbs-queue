@@ -33,9 +33,9 @@ func MigrateUp(ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger) err
 		if _, err := pool.Exec(ctx, string(sql)); err != nil {
 			return fmt.Errorf("exec %s: %w", name, err)
 		}
-
-		logger.Info("migration applied", "file", name)
 	}
+
+	logger.Debug("app migrations up to date", "count", len(files))
 
 	return nil
 }

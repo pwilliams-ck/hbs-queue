@@ -42,11 +42,13 @@ func run(
 
 	cfg := config.Load(getenv)
 
-	logLevel := slog.LevelInfo
+	opts := &slog.HandlerOptions{Level: slog.LevelInfo}
+	var handler slog.Handler = slog.NewJSONHandler(stdout, opts)
 	if cfg.Env == "dev" {
-		logLevel = slog.LevelDebug
+		opts.Level = slog.LevelDebug
+		handler = slog.NewTextHandler(stdout, opts)
 	}
-	logger := slog.New(slog.NewJSONHandler(stdout, &slog.HandlerOptions{Level: logLevel}))
+	logger := slog.New(handler)
 
 	// Database
 	pool, err := db.NewPool(ctx, cfg.DatabaseURL)

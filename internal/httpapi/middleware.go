@@ -90,6 +90,24 @@ func panicRecovery(next http.Handler, logger *slog.Logger) http.Handler {
 	})
 }
 
+// devCORS allows cross-origin requests in dev mode so Swagger UI
+// (localhost:8081) can reach the API (localhost:8080). Only applied
+// when ENV=dev; production traffic is same-origin and doesn't need this.
+func devCORS(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-API-Key, X-Request-ID")
+
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
 // apiKeyAuth returns middleware that rejects requests without a valid
 // X-API-Key header. Comparison is constant-time.
 func apiKeyAuth(expectedKey string) func(http.Handler) http.Handler {

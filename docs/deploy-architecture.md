@@ -263,8 +263,29 @@ the prod deploy (likely another ci01 for prod like in dev).
 
 ## Scaling to Docker Swarm
 
-docker01 is initialized as a single-node swarm. When docker02 and docker03 are
-ready:
+docker01 is initialized as a single-node swarm. The target topology is **3
+manager nodes** (docker01, docker02, docker03) to match the planned prod layout
+and validate multi-node behavior in dev before going live.
+
+> **Why 3?** Swarm manager quorum requires an odd number. Two managers is worse
+> than one (you need both up for quorum). Three gives you fault tolerance — one
+> node can die and the cluster keeps running.
+
+The swarm will host multiple services behind a shared Nginx reverse proxy:
+
+| Port  | Service    | Notes                                  |
+| ----- | ---------- | -------------------------------------- |
+| 8080  | hbs-queue  | Blue/green app deploys                 |
+| 8081  | TBD        | Reserved for future service            |
+| 443   | Keycloak   | If running Keycloak as containers      |
+
+Nginx routes by port or hostname to the appropriate service. This avoids
+Swarm's built-in routing mesh (ingress), which only offers basic round-robin
+with no health-check-aware routing or connection draining. At 3–5 services,
+Nginx config is easy to manage and gives full control over routing, TLS, rate
+limiting, and blue/green swaps.
+
+When docker02 and docker03 are ready:
 
 ```sh
 # On docker02/03:
@@ -272,8 +293,9 @@ docker swarm join --token <worker-or-manager-token> docker01:2377
 ```
 
 The compose file gains `deploy:` directives (replicas, placement constraints,
-rolling update config), but the core structure stays the same. Nginx can be
-replaced by Swarm's built-in routing mesh if desired.
+rolling update config). Postgres stays pinned to one node via placement
+constraint (it needs the named volume). App containers can float across nodes —
+Swarm schedules them.
 
 ### Additional Firewall Rules for Multi-Node Swarm
 

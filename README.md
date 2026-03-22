@@ -5,6 +5,9 @@ across VCD, Zerto, Keycloak, HostBill, and Active Directory.
 
 Built on [River](https://riverqueue.com), a Postgres-backed job queue for Go.
 
+`docs/` contains additional information about architecture, deployment, full API
+surface with OpenAPI Swagger, etc.
+
 ## Table of Contents
 
 - [Requirements](#requirements)
@@ -61,7 +64,7 @@ All configuration is via environment variables.
 
 ## Docker Compose
 
-Postgres and Swagger UI run in Docker Compose:
+Nginx, Postgres, Swagger UI, and hbsqueue run in Docker Compose:
 
 ```sh
 docker compose up -d        # start Postgres + Swagger UI
@@ -102,9 +105,9 @@ internal/
   config/            Config loaded from env via getenv func
   httpapi/           HTTP server, routes, handlers, middleware
   db/                pgxpool, River client, migrations
-  clients/           (future) VCD, Zerto, Keycloak, HostBill, AD
-  jobs/              (future) River job workers
-  workflow/          (future) step runner with JSONB accumulator
+  clients/           (in progress) VCD, Zerto, Keycloak, HostBill, AD
+  jobs/              (in progress) River job workers
+  workflow/          (in progress) step runner with JSONB accumulator
 docs/
   openapi.yaml       API specification
   todo/              task tracking and reference docs
@@ -112,12 +115,12 @@ docs/
 
 ## API
 
-See [`docs/openapi.yaml`](docs/openapi.yaml) for the full specification.
+See [`docs/openapi.yaml`](docs/openapi.yaml) for full specification.
 
 | Method | Path           | Auth    | Description                |
 | ------ | -------------- | ------- | -------------------------- |
-| GET    | `/ready`       | none    | Readiness probe (pings DB) |
-| GET    | `/health`      | none    | Build info + DB status     |
+| GET    | `/ready`       | none    | Readiness probe (pings db) |
+| GET    | `/health`      | none    | Build info + db status     |
 | POST   | `/api/v1/echo` | API key | Echo test                  |
 
 ### Example Responses
@@ -143,12 +146,12 @@ See [`docs/openapi.yaml`](docs/openapi.yaml) for the full specification.
 ## Deployment
 
 See [docs/deploy-architecture.md](docs/deploy-architecture.md) for the full
-deployment architecture, CI/CD pipeline, blue/green deploys, backup strategy,
+deployment architecture, CI/CD pipeline, blue/green deploys, back up strategy,
 network topology, and troubleshooting.
 
 ### Graceful Shutdown
 
-On `SIGINT`/`SIGTERM` the service shuts down in order:
+On `SIGINT`/`SIGTERM` the service shuts down in safe order:
 
 1. **HTTP**: stop accepting new requests, drain in-flight
 2. **River**: stop fetching jobs, let active workers finish

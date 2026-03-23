@@ -72,3 +72,36 @@ func TestHandleEcho(t *testing.T) {
 		})
 	}
 }
+
+func TestStubHandlers(t *testing.T) {
+	t.Parallel()
+
+	stubs := []struct {
+		name    string
+		handler http.Handler
+		path    string
+	}{
+		{"onboard org", handleOnboardOrg(), "/api/v1/script/onboard-org"},
+		{"provision vdc", handleProvisionVDC(), "/api/v1/script/provision-vdc"},
+		{"deboard org", handleDeboardOrg(), "/hooks/deboard-org"},
+		{"onboard contact", handleOnboardContact(), "/hooks/onboard-contact"},
+		{"deboard contact", handleDeboardContact(), "/hooks/deboard-contact"},
+		{"pw change", handlePWChange(), "/hooks/update-pw"},
+		{"bandwidth update", handleBandwidthUpdate(), "/hooks/update-bandwidth"},
+	}
+
+	for _, tt := range stubs {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			req := httptest.NewRequest(http.MethodPost, tt.path, nil)
+			rec := httptest.NewRecorder()
+
+			tt.handler.ServeHTTP(rec, req)
+
+			if rec.Code != http.StatusNotImplemented {
+				t.Errorf("got %d, want 501", rec.Code)
+			}
+		})
+	}
+}

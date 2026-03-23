@@ -1,8 +1,15 @@
 // Package httpapi Route surface:
 //
-//	GET  /ready         — readiness probe, pings DB (no auth)
-//	GET  /health        — build info + DB status (no auth)
-//	POST /api/v1/echo   — echo test (API key auth)
+//	GET  /ready                         — readiness probe, pings DB (no auth)
+//	GET  /health                        — build info + DB status (no auth)
+//	POST /api/v1/echo                   — echo test (API key auth)
+//	POST /api/v1/script/onboard-org     — enqueue tenant onboarding (API key auth)
+//	POST /api/v1/script/provision-vdc   — enqueue VDC provisioning (API key auth)
+//	POST /hooks/deboard-org             — deboard tenant (webhook HMAC auth)
+//	POST /hooks/onboard-contact         — add contact (webhook HMAC auth)
+//	POST /hooks/deboard-contact         — remove contact (webhook HMAC auth)
+//	POST /hooks/update-pw               — password change (webhook HMAC auth)
+//	POST /hooks/update-bandwidth        — bandwidth update (webhook HMAC auth)
 package httpapi
 
 import (
@@ -31,4 +38,13 @@ func addRoutes(
 
 	// API — API key auth
 	mux.Handle("POST /api/v1/echo", withAPIKey(handleEcho(logger)))
+	mux.Handle("POST /api/v1/script/onboard-org", withAPIKey(handleOnboardOrg()))
+	mux.Handle("POST /api/v1/script/provision-vdc", withAPIKey(handleProvisionVDC()))
+
+	// Hooks — per-endpoint webhook HMAC auth
+	mux.Handle("POST /hooks/deboard-org", webhookAuth(cfg.Hooks.DeboardOrg)(handleDeboardOrg()))
+	mux.Handle("POST /hooks/onboard-contact", webhookAuth(cfg.Hooks.OnboardContact)(handleOnboardContact()))
+	mux.Handle("POST /hooks/deboard-contact", webhookAuth(cfg.Hooks.DeboardContact)(handleDeboardContact()))
+	mux.Handle("POST /hooks/update-pw", webhookAuth(cfg.Hooks.UpdatePW)(handlePWChange()))
+	mux.Handle("POST /hooks/update-bandwidth", webhookAuth(cfg.Hooks.UpdateBandwidth)(handleBandwidthUpdate()))
 }

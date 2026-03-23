@@ -2,11 +2,16 @@ package httpapi
 
 import (
 	"bytes"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 func TestRequestID(t *testing.T) {
@@ -156,4 +161,140 @@ func TestRequestLogger(t *testing.T) {
 	if !bytes.Contains(buf.Bytes(), []byte("/test")) {
 		t.Error("expected path in log")
 	}
+}
+
+// signWebhook computes the HMAC-SHA256 signature for a HostBill webhook
+// request, matching the format produced by HostBill: HMAC(secret, timestamp+body).
+func signWebhook(secret, timestamp string, body []byte) string {
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write([]byte(timestamp))
+	mac.Write(body)
+	return hex.EncodeToString(mac.Sum(nil))
+}
+
+func TestWebhookAuth(t *testing.T) {
+	t.Parallel()
+
+	const secret = "test-webhook-secret"
+
+	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	handler := webhookAuth(secret)(inner)
+
+	t.Run("valid signature", func(t *testing.T) {
+		t.Parallel()
+
+		body := []byte(`{"firstname":"Joe","lastname":"Doe"}`)
+		ts := fmt.Sprintf("%d", time.Now().Unix())
+		sig := signWebhook(secret, ts, body)
+
+		req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
+		req.Header.Set("HB-Timestamp", ts)
+		req.Header.Set("HB-Signature", sig)
+		rec := httptest.NewRecorder()
+
+		handler.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Errorf("got %d, want 200", rec.Code)
+		}
+	})
+
+	t.Run("wrong signature", func(t *testing.T) {
+		t.Parallel()
+
+		body := []byte(`{"firstname":"Joe"}`)
+		ts := fmt.Sprintf("%d", time.Now().Unix())
+
+		req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
+		req.Header.Set("HB-Timestamp", ts)
+		req.Header.Set("HB-Signature", "badsig")
+		rec := httptest.NewRecorder()
+
+		handler.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusUnauthorized {
+			t.Errorf("got %d, want 401", rec.Code)
+		}
+	})
+
+	t.Run("missing headers", func(t *testing.T) {
+		t.Parallel()
+
+		req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(`{}`))
+		rec := httptest.NewRecorder()
+
+		handler.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusUnauthorized {
+			t.Errorf("got %d, want 401", rec.Code)
+		}
+	})
+
+	t.Run("expired timestamp", func(t *testing.T) {
+		t.Parallel()
+
+		body := []byte(`{"firstname":"Joe"}`)
+		ts := fmt.Sprintf("%d", time.Now().Add(-2*time.Minute).Unix())
+		sig := signWebhook(secret, ts, body)
+
+		req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
+		req.Header.Set("HB-Timestamp", ts)
+		req.Header.Set("HB-Signature", sig)
+		rec := httptest.NewRecorder()
+
+		handler.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusUnauthorized {
+			t.Errorf("got %d, want 401", rec.Code)
+		}
+	})
+
+	t.Run("no secret configured rejects all", func(t *testing.T) {
+		t.Parallel()
+
+		noSecret := webhookAuth("")
+		h := noSecret(inner)
+
+		body := []byte(`{}`)
+		ts := fmt.Sprintf("%d", time.Now().Unix())
+
+		req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
+		req.Header.Set("HB-Timestamp", ts)
+		req.Header.Set("HB-Signature", "anything")
+		rec := httptest.NewRecorder()
+
+		h.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusUnauthorized {
+			t.Errorf("got %d, want 401", rec.Code)
+		}
+	})
+
+	t.Run("body re-readable after validation", func(t *testing.T) {
+		t.Parallel()
+
+		body := []byte(`{"firstname":"Joe","lastname":"Doe"}`)
+		ts := fmt.Sprintf("%d", time.Now().Unix())
+		sig := signWebhook(secret, ts, body)
+
+		var downstream []byte
+		readerCheck := webhookAuth(secret)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			downstream, _ = io.ReadAll(r.Body)
+			w.WriteHeader(http.StatusOK)
+		}))
+
+		req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
+		req.Header.Set("HB-Timestamp", ts)
+		req.Header.Set("HB-Signature", sig)
+		rec := httptest.NewRecorder()
+
+		readerCheck.ServeHTTP(rec, req)
+
+		if !bytes.Equal(downstream, body) {
+			t.Errorf("downstream body = %q, want %q", downstream, body)
+		}
+	})
 }

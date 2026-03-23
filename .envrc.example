@@ -4,3 +4,13 @@ export ENV=dev
 export API_KEY=dev-secret-key
 
 export DATABASE_URL=postgres://hbsqueue:dev-password@localhost:5432/hbsqueue_dev?sslmode=disable
+
+# HostBill webhook HMAC secrets — one per hook event.
+export HOOK_SECRET_DEBOARD_ORG=
+export HOOK_SECRET_ONBOARD_CONTACT=
+export HOOK_SECRET_DEBOARD_CONTACT=
+export HOOK_SECRET_UPDATE_PW=
+export HOOK_SECRET_UPDATE_BANDWIDTH=
+
+# Debug/profiling listener port (not exposed via k3s Service).
+export DEBUG_PORT=6061

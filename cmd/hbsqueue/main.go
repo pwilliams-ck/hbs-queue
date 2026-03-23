@@ -14,11 +14,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/riverqueue/river"
-
 	"github.com/CloudKey-io/hbs-queue/internal/config"
 	"github.com/CloudKey-io/hbs-queue/internal/db"
 	"github.com/CloudKey-io/hbs-queue/internal/httpapi"
+	"github.com/CloudKey-io/hbs-queue/internal/jobs"
+	"github.com/CloudKey-io/hbs-queue/internal/workflow"
 )
 
 func main() {
@@ -65,11 +65,19 @@ func run(
 		return fmt.Errorf("app migrations: %w", err)
 	}
 
-	// River client — no workers registered yet, will be added in Task 5.
-	workers := river.NewWorkers()
+	// Workflow state repository — shared by all workers.
+	repo := workflow.NewPgxRepository()
+
+	// River client with registered workers.
+	workers := jobs.Register(pool, repo, logger)
 	riverClient, err := db.NewRiverClient(pool, workers)
 	if err != nil {
 		return fmt.Errorf("river client: %w", err)
+	}
+
+	// Start River — begins fetching and processing jobs.
+	if err := riverClient.Start(ctx); err != nil {
+		return fmt.Errorf("river start: %w", err)
 	}
 
 	// Server
@@ -84,11 +92,23 @@ func run(
 		IdleTimeout:       60 * time.Second,
 	}
 
-	// Start listener in a goroutine and surface bind errors immediately.
+	// Debug/profiling server on a separate port.
+	debugServer := &http.Server{
+		Addr:    ":" + cfg.DebugPort,
+		Handler: newDebugMux(),
+	}
+
+	// Start listeners.
 	serverErr := make(chan error, 1)
 	go func() {
 		logger.Info("server starting", "addr", httpServer.Addr, "env", cfg.Env)
 		serverErr <- httpServer.ListenAndServe()
+	}()
+	go func() {
+		logger.Info("debug server starting", "addr", debugServer.Addr)
+		if err := debugServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Error("debug server error", "err", err)
+		}
 	}()
 
 	// Block until shutdown signal or server failure.
@@ -107,10 +127,15 @@ func run(
 
 	// Shutdown order matters:
 	// 1. HTTP — stop accepting new requests, drain in-flight
-	// 2. River — stop fetching jobs, let active jobs finish
-	// 3. Pool — closed via defer above after everything else is done
+	// 2. Debug — stop diagnostics listener
+	// 3. River — stop fetching jobs, let active jobs finish
+	// 4. Pool — closed via defer above after everything else is done
 	if err := httpServer.Shutdown(shutdownCtx); err != nil {
 		logger.Error("http shutdown error", "err", err)
+	}
+
+	if err := debugServer.Shutdown(shutdownCtx); err != nil {
+		logger.Error("debug shutdown error", "err", err)
 	}
 
 	if err := riverClient.Stop(shutdownCtx); err != nil {

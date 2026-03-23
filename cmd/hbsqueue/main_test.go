@@ -26,11 +26,14 @@ func TestRun(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 
+	debugPort := freePort(t)
+
 	getenv := mockGetenv(map[string]string{
 		"PORT":         port,
 		"ENV":          "test",
 		"API_KEY":      "test-key",
 		"DATABASE_URL": databaseURL,
+		"DEBUG_PORT":   debugPort,
 	})
 
 	stdout := &bytes.Buffer{}
@@ -138,6 +141,57 @@ func TestRun(t *testing.T) {
 
 		if resp.StatusCode != http.StatusUnprocessableEntity {
 			t.Errorf("got status %d, want 422", resp.StatusCode)
+		}
+	})
+
+	// Stub handlers return 501 Not Implemented.
+	t.Run("script onboard-org requires API key", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodPost, baseURL+"/api/v1/script/onboard-org", nil)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatalf("request: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusUnauthorized {
+			t.Errorf("got status %d, want 401", resp.StatusCode)
+		}
+	})
+
+	t.Run("script onboard-org stub returns 501", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodPost, baseURL+"/api/v1/script/onboard-org", nil)
+		req.Header.Set("X-API-Key", "test-key")
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatalf("request: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusNotImplemented {
+			t.Errorf("got status %d, want 501", resp.StatusCode)
+		}
+	})
+
+	t.Run("hooks require webhook auth", func(t *testing.T) {
+		paths := []string{
+			"/hooks/deboard-org",
+			"/hooks/onboard-contact",
+			"/hooks/deboard-contact",
+			"/hooks/update-pw",
+			"/hooks/update-bandwidth",
+		}
+		for _, path := range paths {
+			req, _ := http.NewRequest(http.MethodPost, baseURL+path, nil)
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				t.Fatalf("POST %s: %v", path, err)
+			}
+			resp.Body.Close()
+
+			// No webhook secrets configured → 401.
+			if resp.StatusCode != http.StatusUnauthorized {
+				t.Errorf("POST %s: got status %d, want 401", path, resp.StatusCode)
+			}
 		}
 	})
 

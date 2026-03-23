@@ -18,7 +18,7 @@ import (
 //
 // Step sequence:
 //
-//	Step 0: check_tenant    — determine if org is new or existing in VCD
+//	Step 0: check_org       — determine if org is new or existing in VCD
 //	Step 1: network_config  — configure virtual DC and default network
 //	Step 2: saml_config     — establish SAML federation between VCD and Keycloak
 //	Step 3: zerto_setup     — register org in Zerto, configure limits
@@ -59,7 +59,7 @@ func (w *OnboardOrgWorker) Work(ctx context.Context, job *river.Job[OnboardOrgAr
 	}
 
 	steps := []workflow.Step{
-		&checkTenantStep{},
+		&checkOrgStep{},
 		&networkConfigStep{},
 		&samlConfigStep{},
 		&zertoSetupStep{},
@@ -92,10 +92,10 @@ func argsToData(args OnboardOrgArgs) (map[string]json.RawMessage, error) {
 // Stub steps — each returns nil (no-op). Real implementations will be
 // added in Tasks 5-7 when the external API clients are built.
 
-type checkTenantStep struct{}
+type checkOrgStep struct{}
 
-func (s *checkTenantStep) Name() string                                           { return "check_tenant" }
-func (s *checkTenantStep) Run(_ context.Context, _ *workflow.WorkflowState) error { return nil }
+func (s *checkOrgStep) Name() string                                           { return "check_org" }
+func (s *checkOrgStep) Run(_ context.Context, _ *workflow.WorkflowState) error { return nil }
 
 type networkConfigStep struct{}
 

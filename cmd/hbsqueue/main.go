@@ -89,7 +89,7 @@ func run(
 	}
 
 	// Server
-	srv := httpapi.NewServer(logger, cfg, pool, riverClient)
+	srv := httpapi.NewServer(logger, cfg, pool, riverClient, vcdClient)
 
 	httpServer := &http.Server{
 		Addr:              ":" + cfg.Port,

@@ -73,6 +73,31 @@ func TestHandleEcho(t *testing.T) {
 	}
 }
 
+func TestHandleOnboardOrgNoVCDClient(t *testing.T) {
+	t.Parallel()
+
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	handler := handleOnboardOrg(logger, nil)
+
+	body := `{"crm_id":"167","client_first_name":"Test","client_last_name":"User","client_email":"test@example.com","account_id":1,"bandwidth":"100"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/script/onboard-org",
+		bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Errorf("got %d, want 503", rec.Code)
+	}
+
+	var resp ErrorResponse
+	json.NewDecoder(rec.Body).Decode(&resp)
+	if resp.Error != "vcd client not configured" {
+		t.Errorf("got error %q, want %q", resp.Error, "vcd client not configured")
+	}
+}
+
 func TestStubHandlers(t *testing.T) {
 	t.Parallel()
 
@@ -81,7 +106,6 @@ func TestStubHandlers(t *testing.T) {
 		handler http.Handler
 		path    string
 	}{
-		{"onboard org", handleOnboardOrg(), "/api/v1/script/onboard-org"},
 		{"deboard org", handleDeboardOrg(), "/hooks/deboard-org"},
 		{"onboard contact", handleOnboardContact(), "/hooks/onboard-contact"},
 		{"deboard contact", handleDeboardContact(), "/hooks/deboard-contact"},

@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/CloudKey-io/hbs-queue/internal/clients/vcd"
 	"github.com/CloudKey-io/hbs-queue/internal/config"
 )
 
@@ -28,6 +29,7 @@ func addRoutes(
 	cfg *config.Config,
 	pool *pgxpool.Pool,
 	_ *river.Client[pgx.Tx],
+	vcdClient *vcd.Client,
 ) {
 	withAPIKey := apiKeyAuth(cfg.APIKey)
 
@@ -37,7 +39,7 @@ func addRoutes(
 
 	// API — API key auth
 	mux.Handle("POST /api/v1/echo", withAPIKey(handleEcho(logger)))
-	mux.Handle("POST /api/v1/script/onboard-org", withAPIKey(handleOnboardOrg()))
+	mux.Handle("POST /api/v1/script/onboard-org", withAPIKey(handleOnboardOrg(logger, vcdClient)))
 
 	// Hooks — per-endpoint webhook HMAC auth
 	mux.Handle("POST /hooks/deboard-org", webhookAuth(cfg.Hooks.DeboardOrg)(handleDeboardOrg()))

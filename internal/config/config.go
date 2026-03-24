@@ -49,6 +49,21 @@ type Config struct {
 
 	// DatabaseURL is the Postgres connection string.
 	DatabaseURL string
+
+	// VCDBaseURL is the VMware Cloud Director API endpoint (e.g. "https://vcd.example.com").
+	VCDBaseURL string
+
+	// VCDVersion is the VCD API version to use (default "38.0").
+	VCDVersion string
+
+	// VCDUser is the VCD API username.
+	VCDUser string
+
+	// VCDPassword is the VCD API password.
+	VCDPassword string
+
+	// VCDOrg is the VCD organization used for authentication (default "System").
+	VCDOrg string
 }
 
 // Load returns a Config populated from environment variables.
@@ -70,6 +85,11 @@ func Load(getenv func(string) string) *Config {
 		Commit:      Commit,
 		BuildTime:   BuildTime,
 		DatabaseURL: getenv("DATABASE_URL"),
+		VCDBaseURL:  getenv("VCD_URL"),
+		VCDVersion:  envOr(getenv, "VCD_VERSION", "38.0"),
+		VCDUser:     getenv("VCD_USER"),
+		VCDPassword: getenv("VCD_PASSWORD"),
+		VCDOrg:      envOr(getenv, "VCD_ORG", "System"),
 	}
 }
 

@@ -14,3 +14,10 @@ export HOOK_SECRET_UPDATE_BANDWIDTH=
 
 # Debug/profiling listener port (not exposed via k3s Service).
 export DEBUG_PORT=6061
+
+# VMware Cloud Director API.
+export VCD_URL=https://vcd.example.com
+export VCD_VERSION=38.0
+export VCD_USER=admin
+export VCD_PASSWORD=
+export VCD_ORG=System

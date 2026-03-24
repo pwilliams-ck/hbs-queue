@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/CloudKey-io/hbs-queue/internal/clients/vcd"
 	"github.com/CloudKey-io/hbs-queue/internal/config"
 	"github.com/CloudKey-io/hbs-queue/internal/db"
 	"github.com/CloudKey-io/hbs-queue/internal/httpapi"
@@ -65,11 +66,18 @@ func run(
 		return fmt.Errorf("app migrations: %w", err)
 	}
 
+	// VCD client — optional in dev, required when running real workflows.
+	var vcdClient *vcd.Client
+	if cfg.VCDBaseURL != "" {
+		vcdClient = vcd.New(cfg.VCDBaseURL, cfg.VCDVersion, cfg.VCDUser, cfg.VCDPassword, cfg.VCDOrg, logger)
+		logger.Info("vcd client configured", "url", cfg.VCDBaseURL)
+	}
+
 	// Workflow state repository — shared by all workers.
 	repo := workflow.NewPgxRepository()
 
 	// River client with registered workers.
-	workers := jobs.Register(pool, repo, logger)
+	workers := jobs.Register(pool, repo, vcdClient, logger)
 	riverClient, err := db.NewRiverClient(pool, workers)
 	if err != nil {
 		return fmt.Errorf("river client: %w", err)

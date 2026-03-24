@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/CloudKey-io/hbs-queue/internal/clients/vcd"
 	"github.com/CloudKey-io/hbs-queue/internal/workflow"
 )
 
@@ -34,17 +35,19 @@ import (
 // Steps are stubs in Task 4; real implementations land in Tasks 5-7.
 type OnboardOrgWorker struct {
 	river.WorkerDefaults[OnboardOrgArgs]
-	pool   *pgxpool.Pool
-	repo   workflow.Repository
-	logger *slog.Logger
+	pool      *pgxpool.Pool
+	repo      workflow.Repository
+	vcdClient *vcd.Client
+	logger    *slog.Logger
 }
 
 // NewOnboardOrgWorker creates an OnboardOrgWorker.
-func NewOnboardOrgWorker(pool *pgxpool.Pool, repo workflow.Repository, logger *slog.Logger) *OnboardOrgWorker {
+func NewOnboardOrgWorker(pool *pgxpool.Pool, repo workflow.Repository, vcdClient *vcd.Client, logger *slog.Logger) *OnboardOrgWorker {
 	return &OnboardOrgWorker{
-		pool:   pool,
-		repo:   repo,
-		logger: logger,
+		pool:      pool,
+		repo:      repo,
+		vcdClient: vcdClient,
+		logger:    logger,
 	}
 }
 

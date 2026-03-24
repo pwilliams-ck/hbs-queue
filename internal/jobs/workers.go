@@ -6,6 +6,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/CloudKey-io/hbs-queue/internal/clients/vcd"
 	"github.com/CloudKey-io/hbs-queue/internal/workflow"
 )
 
@@ -18,8 +19,8 @@ import (
 //
 // Additional workers will be registered as their workflows are
 // implemented in Tasks 5-7.
-func Register(pool *pgxpool.Pool, repo workflow.Repository, logger *slog.Logger) *river.Workers {
+func Register(pool *pgxpool.Pool, repo workflow.Repository, vcdClient *vcd.Client, logger *slog.Logger) *river.Workers {
 	workers := river.NewWorkers()
-	river.AddWorker(workers, NewOnboardOrgWorker(pool, repo, logger))
+	river.AddWorker(workers, NewOnboardOrgWorker(pool, repo, vcdClient, logger))
 	return workers
 }

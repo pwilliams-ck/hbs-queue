@@ -49,6 +49,12 @@ func New(baseURL, version, username, password, org string, logger *slog.Logger) 
 	}
 }
 
+// SetHTTPClient replaces the underlying HTTP client. This is intended for
+// tests that need to point the client at an httptest.Server with custom TLS.
+func (c *Client) SetHTTPClient(hc *http.Client) {
+	c.httpClient = hc
+}
+
 func newHTTPClient() *http.Client {
 	return &http.Client{
 		Timeout: 30 * time.Second,

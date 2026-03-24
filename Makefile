@@ -7,7 +7,7 @@ LDFLAGS := -ldflags "\
  -X github.com/CloudKey-io/hbs-queue/internal/config.Commit=$(COMMIT) \
  -X github.com/CloudKey-io/hbs-queue/internal/config.BuildTime=$(BUILD_TIME)"
 
-.PHONY: help run build test lint check clean dev-up dev-down dev-logs
+.PHONY: help run build test lint check clean dev-up dev-down dev-reset dev-logs
 
 ## help: show this help message
 help:
@@ -49,6 +49,10 @@ dev-up:
 ## dev-down: stop local dev dependencies
 dev-down:
 	docker compose down
+
+## dev-reset: stop dev dependencies and delete volumes (clean DB)
+dev-reset:
+	docker compose down -v
 
 ## dev-logs: tail logs from dev dependencies
 dev-logs:

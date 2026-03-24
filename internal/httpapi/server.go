@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/CloudKey-io/hbs-queue/internal/clients/vcd"
 	"github.com/CloudKey-io/hbs-queue/internal/config"
 )
 
@@ -20,10 +21,11 @@ func NewServer(
 	cfg *config.Config,
 	pool *pgxpool.Pool,
 	riverClient *river.Client[pgx.Tx],
+	vcdClient *vcd.Client,
 ) http.Handler {
 	mux := http.NewServeMux()
 
-	addRoutes(mux, logger, cfg, pool, riverClient)
+	addRoutes(mux, logger, cfg, pool, riverClient, vcdClient)
 
 	var handler http.Handler = mux
 	handler = panicRecovery(handler, logger)

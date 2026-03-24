@@ -158,8 +158,11 @@ func TestRun(t *testing.T) {
 		}
 	})
 
-	t.Run("script onboard-org stub returns 501", func(t *testing.T) {
-		req, _ := http.NewRequest(http.MethodPost, baseURL+"/api/v1/script/onboard-org", nil)
+	t.Run("script onboard-org returns 503 without vcd client", func(t *testing.T) {
+		body := `{"crm_id":"167","client_first_name":"Test","client_last_name":"User","client_email":"test@example.com","account_id":1,"bandwidth":"100"}`
+		req, _ := http.NewRequest(http.MethodPost, baseURL+"/api/v1/script/onboard-org",
+			bytes.NewBufferString(body))
+		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-API-Key", "test-key")
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
@@ -167,8 +170,8 @@ func TestRun(t *testing.T) {
 		}
 		defer resp.Body.Close()
 
-		if resp.StatusCode != http.StatusNotImplemented {
-			t.Errorf("got status %d, want 501", resp.StatusCode)
+		if resp.StatusCode != http.StatusServiceUnavailable {
+			t.Errorf("got status %d, want 503", resp.StatusCode)
 		}
 	})
 

@@ -45,7 +45,6 @@ func (r *Runner) Run(
 	jobID int64,
 	workflowType string,
 	clientID string,
-	orderID string,
 	initialData map[string]json.RawMessage,
 ) error {
 	// Load existing state or create a new row.
@@ -59,7 +58,6 @@ func (r *Runner) Run(
 			JobID:        jobID,
 			WorkflowType: workflowType,
 			ClientID:     clientID,
-			OrderID:      orderID,
 			Status:       StatusPending,
 			Data:         initialData,
 		}

@@ -82,7 +82,6 @@ func TestStubHandlers(t *testing.T) {
 		path    string
 	}{
 		{"onboard org", handleOnboardOrg(), "/api/v1/script/onboard-org"},
-		{"provision vdc", handleProvisionVDC(), "/api/v1/script/provision-vdc"},
 		{"deboard org", handleDeboardOrg(), "/hooks/deboard-org"},
 		{"onboard contact", handleOnboardContact(), "/hooks/onboard-contact"},
 		{"deboard contact", handleDeboardContact(), "/hooks/deboard-contact"},

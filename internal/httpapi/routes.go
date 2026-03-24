@@ -4,7 +4,6 @@
 //	GET  /health                        — build info + DB status (no auth)
 //	POST /api/v1/echo                   — echo test (API key auth)
 //	POST /api/v1/script/onboard-org     — enqueue tenant onboarding (API key auth)
-//	POST /api/v1/script/provision-vdc   — enqueue VDC provisioning (API key auth)
 //	POST /hooks/deboard-org             — deboard tenant (webhook HMAC auth)
 //	POST /hooks/onboard-contact         — add contact (webhook HMAC auth)
 //	POST /hooks/deboard-contact         — remove contact (webhook HMAC auth)
@@ -39,7 +38,6 @@ func addRoutes(
 	// API — API key auth
 	mux.Handle("POST /api/v1/echo", withAPIKey(handleEcho(logger)))
 	mux.Handle("POST /api/v1/script/onboard-org", withAPIKey(handleOnboardOrg()))
-	mux.Handle("POST /api/v1/script/provision-vdc", withAPIKey(handleProvisionVDC()))
 
 	// Hooks — per-endpoint webhook HMAC auth
 	mux.Handle("POST /hooks/deboard-org", webhookAuth(cfg.Hooks.DeboardOrg)(handleDeboardOrg()))

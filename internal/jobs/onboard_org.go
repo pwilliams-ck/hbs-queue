@@ -16,15 +16,20 @@ import (
 // POST /api/v1/script/onboard-org. It uses the workflow runner to
 // execute steps in order, resuming from current_step on retry.
 //
+// Each step is independently idempotent — it checks the actual state of
+// the external system it talks to and either performs the operation or
+// skips if already done. This means the same workflow handles both new
+// and existing customers without branching.
+//
 // Step sequence:
 //
-//	Step 0: check_org       — determine if org is new or existing in VCD
-//	Step 1: network_config  — configure virtual DC and default network
-//	Step 2: saml_config     — establish SAML federation between VCD and Keycloak
-//	Step 3: zerto_setup     — register org in Zerto, configure limits
-//	Step 4: ldap_update     — add LDAP entry for zorg user
-//	Step 5: keycloak_sync   — trigger Keycloak federation sync
-//	Step 6: vapp_template   — deploy vApp template to org VDC
+//	Step 0: check_org       — look up org in VCD, store metadata in accumulator
+//	Step 1: network_config  — configure VDC default network (always runs)
+//	Step 2: saml_config     — check if Keycloak SAML client exists; skip if yes, create if no
+//	Step 3: zerto_setup     — check if Zerto org exists; update resources if yes, create if no
+//	Step 4: ldap_update     — check if LDAP attrs set; skip if yes, add if no
+//	Step 5: keycloak_sync   — trigger Keycloak user sync (always safe to run)
+//	Step 6: vapp_template   — provision vApp if product_id matches a configured template
 //
 // Steps are stubs in Task 4; real implementations land in Tasks 5-7.
 type OnboardOrgWorker struct {
@@ -69,7 +74,7 @@ func (w *OnboardOrgWorker) Work(ctx context.Context, job *river.Job[OnboardOrgAr
 	}
 
 	runner := workflow.NewRunner(w.repo, steps, w.logger)
-	if err := runner.Run(ctx, tx, job.ID, "onboard_customer", job.Args.ClientID, job.Args.OrderID, initialData); err != nil {
+	if err := runner.Run(ctx, tx, job.ID, "onboard_customer", job.Args.ClientID, initialData); err != nil {
 		return err
 	}
 

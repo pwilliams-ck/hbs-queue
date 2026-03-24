@@ -7,14 +7,13 @@ package jobs
 // Enqueued by POST /api/v1/script/onboard-org.
 // Maps to workflow type "onboard_customer".
 type OnboardOrgArgs struct {
-	ClientID         string `json:"client_id"`
+	ClientID         string `json:"crm_id"`
 	OrganizationName string `json:"organization_name"`
 	ClientUsername   string `json:"client_username"`
 	ClientFirstName  string `json:"client_first_name"`
 	ClientLastName   string `json:"client_last_name"`
 	ClientEmail      string `json:"client_email"`
 	AccountID        int    `json:"account_id"`
-	OrderID          string `json:"order_id"`
 	Country          string `json:"country"`
 	State            string `json:"state"`
 	PostalCode       string `json:"postal_code"`
@@ -26,19 +25,6 @@ type OnboardOrgArgs struct {
 
 // Kind returns the River job kind for onboard_customer jobs.
 func (OnboardOrgArgs) Kind() string { return "onboard_customer" }
-
-// ProvisionVDCArgs is the payload for the provision_vdc job.
-// Enqueued by POST /api/v1/script/provision-vdc.
-// Maps to workflow type "provision_vdc".
-type ProvisionVDCArgs struct {
-	ClientID  string `json:"client_id"`
-	OrderID   string `json:"order_id"`
-	AccountID int    `json:"account_id"`
-	ProductID string `json:"product_id"`
-}
-
-// Kind returns the River job kind for provision_vdc jobs.
-func (ProvisionVDCArgs) Kind() string { return "provision_vdc" }
 
 // DeboardOrgArgs is the payload for the deboard_customer job.
 // Enqueued by POST /hooks/deboard-org.

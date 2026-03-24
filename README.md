@@ -136,7 +136,6 @@ See [`docs/openapi.yaml`](docs/openapi.yaml) for full specification.
 | GET    | `/health`                        | none    | Build info + DB status      |
 | POST   | `/api/v1/echo`                   | API key | Echo test                   |
 | POST   | `/api/v1/script/onboard-org`     | API key | Enqueue tenant onboarding   |
-| POST   | `/api/v1/script/provision-vdc`   | API key | Enqueue VDC provisioning    |
 | POST   | `/hooks/deboard-org`             | Webhook | Deboard tenant              |
 | POST   | `/hooks/onboard-contact`         | Webhook | Add contact                 |
 | POST   | `/hooks/deboard-contact`         | Webhook | Remove contact              |
@@ -207,7 +206,6 @@ what they produce (`state.Set("key", value)`).
 | Job Type           | Args Struct           | Enqueued By                        |
 | ------------------ | --------------------- | ---------------------------------- |
 | `onboard_customer` | `OnboardOrgArgs`      | POST `/api/v1/script/onboard-org`  |
-| `provision_vdc`    | `ProvisionVDCArgs`    | POST `/api/v1/script/provision-vdc`|
 | `deboard_customer` | `DeboardOrgArgs`      | POST `/hooks/deboard-org`          |
 | `add_contact`      | `AddContactArgs`      | POST `/hooks/onboard-contact`      |
 | `delete_contact`   | `DeleteContactArgs`   | POST `/hooks/deboard-contact`      |
@@ -219,7 +217,7 @@ what they produce (`state.Set("key", value)`).
 ```sql
 INSERT INTO river_job (args, kind, queue, state, max_attempts, priority, created_at, scheduled_at)
 VALUES (
-  '{"client_id":"test001","organization_name":"TestCorp","client_username":"testuser","client_first_name":"Test","client_last_name":"User","client_email":"test@example.com","account_id":1,"order_id":"ORD-001","country":"US","state":"Texas","postal_code":"75074","max_zerto_storage":50,"max_zerto_vms":5,"bandwidth":"100","product_id":"web-1"}',
+  '{"crm_id":"test001","organization_name":"TestCorp","client_username":"testuser","client_first_name":"Test","client_last_name":"User","client_email":"test@example.com","account_id":1,"country":"US","state":"Texas","postal_code":"75074","max_zerto_storage":50,"max_zerto_vms":5,"bandwidth":"100","product_id":"web-1"}',
   'onboard_customer', 'default', 'available', 3, 1, now(), now()
 );
 ```

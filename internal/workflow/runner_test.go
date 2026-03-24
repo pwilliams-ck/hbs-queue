@@ -93,7 +93,7 @@ func TestRunnerAllStepsComplete(t *testing.T) {
 	}
 	runner := NewRunner(repo, steps, testLogger())
 
-	err := runner.Run(context.Background(), nil, 1, "test_workflow", "client1", "order1", nil)
+	err := runner.Run(context.Background(), nil, 1, "test_workflow", "client1", nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -132,7 +132,7 @@ func TestRunnerResumesFromCurrentStep(t *testing.T) {
 	}
 	runner := NewRunner(repo, steps, testLogger())
 
-	err := runner.Run(context.Background(), nil, 1, "test_workflow", "client1", "", nil)
+	err := runner.Run(context.Background(), nil, 1, "test_workflow", "client1", nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -165,7 +165,7 @@ func TestRunnerStepFailure(t *testing.T) {
 	}
 	runner := NewRunner(repo, steps, testLogger())
 
-	err := runner.Run(context.Background(), nil, 1, "test_workflow", "client1", "", nil)
+	err := runner.Run(context.Background(), nil, 1, "test_workflow", "client1", nil)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -193,7 +193,7 @@ func TestRunnerPermanentError(t *testing.T) {
 	}
 	runner := NewRunner(repo, steps, testLogger())
 
-	err := runner.Run(context.Background(), nil, 1, "test_workflow", "client1", "", nil)
+	err := runner.Run(context.Background(), nil, 1, "test_workflow", "client1", nil)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -220,7 +220,7 @@ func TestRunnerAccumulatesData(t *testing.T) {
 	}
 	runner := NewRunner(repo, steps, testLogger())
 
-	err := runner.Run(context.Background(), nil, 1, "test_workflow", "client1", "", initial)
+	err := runner.Run(context.Background(), nil, 1, "test_workflow", "client1", initial)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

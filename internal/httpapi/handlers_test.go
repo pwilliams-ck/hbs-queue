@@ -77,7 +77,7 @@ func TestHandleOnboardOrgNoVCDClient(t *testing.T) {
 	t.Parallel()
 
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	handler := handleOnboardOrg(logger, nil)
+	handler := handleOnboardOrg(logger, nil, nil, nil)
 
 	body := `{"crm_id":"167","client_first_name":"Test","client_last_name":"User","client_email":"test@example.com","account_id":1,"bandwidth":"100"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/script/onboard-org",

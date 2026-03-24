@@ -88,6 +88,64 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /api/v1/script/onboard-org:
+    post:
+      summary: Onboard organization
+      description: |
+        Enqueues a tenant onboarding workflow. Called by HostBill's Script
+        Provisioner when a new VCD tenant order is created.
+
+        Flow: validate request → look up org in VCD → enqueue River job → return 202.
+      operationId: postOnboardOrg
+      security:
+        - apiKey: []
+      parameters:
+        - name: X-Request-ID
+          in: header
+          description: Optional trace ID. If omitted, the server generates one.
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OnboardOrgRequest"
+      responses:
+        "202":
+          description: Job enqueued.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobAcceptedResponse"
+        "400":
+          description: Malformed JSON.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Missing or invalid API key.
+        "422":
+          description: Validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: VCD lookup failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: VCD client not configured.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   securitySchemes:
     apiKey:
@@ -145,6 +203,71 @@ components:
         request_id:
           type: string
           example: a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
+
+    OnboardOrgRequest:
+      type: object
+      required: [crm_id, client_first_name, client_last_name, client_email, account_id, bandwidth]
+      properties:
+        crm_id:
+          type: string
+          description: HostBill client ID, used to look up the VCD organization.
+          example: "167"
+        organization_name:
+          type: string
+          example: AcmeCorp
+        client_username:
+          type: string
+          example: testuser
+        client_first_name:
+          type: string
+          example: Test
+        client_last_name:
+          type: string
+          example: User
+        client_email:
+          type: string
+          format: email
+          example: test@example.com
+        account_id:
+          type: integer
+          minimum: 1
+          example: 1
+        country:
+          type: string
+          example: US
+        state:
+          type: string
+          example: TX
+        postal_code:
+          type: string
+          example: "75001"
+        max_zerto_storage:
+          type: integer
+          minimum: 0
+          example: 0
+        max_zerto_vms:
+          type: integer
+          minimum: 0
+          example: 0
+        bandwidth:
+          type: string
+          example: "100"
+        product_id:
+          type: string
+          example: ""
+
+    JobAcceptedResponse:
+      type: object
+      required: [job_id]
+      properties:
+        job_id:
+          type: integer
+          format: int64
+          example: 1
+        workflow_id:
+          type: string
+          description: Set once the worker creates the workflow_state row.
+          example: ""
 
     ErrorResponse:
       type: object

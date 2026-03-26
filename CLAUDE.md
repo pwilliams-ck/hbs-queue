@@ -3,7 +3,7 @@
 **hbs-queue** — Go service orchestrating customer onboarding/offboarding across
 VCD, Zerto, Keycloak, HostBill, and Active Directory via
 [River](https://riverqueue.com) (Postgres-backed job queue). Through Task 5;
-remaining: other clients, integration tests, k3s deploy, prod hardening.
+remaining: other clients, integration tests, deploy, prod hardening.
 
 ## Commands
 

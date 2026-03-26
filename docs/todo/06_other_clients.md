@@ -163,5 +163,5 @@ env var reference table in README.
 [ ] All clients connect to real dev servers successfully
 [ ] Unit tests pass for all clients
 [ ] make test → all pass
-[ ] ✅ Milestone: all integrations stubbed and tested
+[ ] All integrations stubbed and tested
 ```

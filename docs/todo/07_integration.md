@@ -120,5 +120,5 @@ status endpoint in README.
 [ ] GET /api/v1/jobs/:id → reflects current status
 [ ] make test → unit tests pass
 [ ] make test-integration → integration tests pass
-[ ] ✅ Milestone: end-to-end flows working
+[ ] End-to-end flows working
 ```

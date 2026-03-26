@@ -172,5 +172,5 @@ Implementation:
 [ ] Push to main → CI passes → deploys to dev VM
 [ ] git tag v1.0.0 → CI passes → deploys to prod
 [ ] Security checklist all green
-[ ] ✅ Milestone: production ready
+[ ] Production ready
 ```

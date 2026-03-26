@@ -112,5 +112,5 @@ IF NOT EXISTS CREATE TABLE workflow_state (
 [✅] curl localhost:8080/ready   → 200 (DB ping succeeds)
 [✅] curl localhost:8080/health  → 200 with version + DB status
 [✅] make test                   → all pass
-[✅] ✅ Milestone: localhost dev complete
+[✅] Localhost dev complete
 ```

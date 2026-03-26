@@ -6,6 +6,10 @@ included for advertisement sales conversion rates.
 
 Built on [River](https://riverqueue.com), a Postgres-backed job queue for Go.
 
+**Progress:** Task 6 of 9 — add remaining HTTP clients, integration tests,
+deployment, production preparation. See [`docs/todo/`](docs/todo/) for the full
+checklist.
+
 **[Deployment Architecture](docs/deploy-architecture.md)** includes Docker
 Compose, blue/green deploys with automated rollbacks, dedicated CI/CD GitHub
 Actions runner (self-hosted), and 3-2-1-1-0 database backup strategy with
@@ -139,7 +143,7 @@ internal/
   clients/           VCD, Zerto, Keycloak, HostBill, AD, Reddit (in progress)
 docs/
   openapi.yaml       API specification
-  todo/              task tracking and reference docs
+  todo/              task checklist and progress tracking
 ```
 
 ## API

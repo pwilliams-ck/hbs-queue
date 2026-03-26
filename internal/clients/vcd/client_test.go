@@ -244,6 +244,55 @@ func TestErrorClassification(t *testing.T) {
 	}
 }
 
+func TestSummarizeBody(t *testing.T) {
+	t.Parallel()
+
+	longBody := ""
+	for range 250 {
+		longBody += "x"
+	}
+
+	tests := []struct {
+		name string
+		body string
+		want string
+	}{
+		{"plain short", "bad request", "bad request"},
+		{"plain truncated", longBody, longBody[:200] + "..."},
+		{"empty", "", ""},
+		{"html with title", `<html><head><title>403 Error - Message</title></head><body></body></html>`, "403 Error - Message"},
+		{"html with h3 no title", `<html><body><h3>503 Service Unavailable</h3></body></html>`, "503 Service Unavailable"},
+		{"html no title or h3", `<html><body><p>oops</p></body></html>`, "(HTML error page)"},
+		{"HTML uppercase", `<HTML><HEAD><TITLE>Forbidden</TITLE></HEAD></HTML>`, "Forbidden"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := summarizeBody(tt.body)
+			if got != tt.want {
+				t.Errorf("summarizeBody() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestAPIErrorMessage(t *testing.T) {
+	t.Parallel()
+
+	err := &APIError{
+		StatusCode: 403,
+		Method:     "POST",
+		Path:       "/cloudapi/1.0.0/sessions/provider",
+		Body:       `<html><head><title>403 Error - Message</title></head></html>`,
+	}
+
+	want := "vcd: POST /cloudapi/1.0.0/sessions/provider returned 403: 403 Error - Message"
+	if got := err.Error(); got != want {
+		t.Errorf("Error() = %q, want %q", got, want)
+	}
+}
+
 func TestExtractUUID(t *testing.T) {
 	t.Parallel()
 

@@ -73,21 +73,19 @@ these patterns. Keep external package dependencies to a minimum.
 
 ---
 
-## Quick Reference - Days at a Glance
+## Quick Reference
 
-| Days  | Task                        | Milestone                                                     |
-| ----- | --------------------------- | ------------------------------------------------------------- |
-| 1–3   | Task 1: Init                | Repo created, service runs, /ready works, README started      |
-| 4–5   | Task 2: Local Docker        | Postgres in Docker Compose, DATABASE_URL wired                |
-| 6–9   | Task 3: DB + River          | /ready and /health ping DB, localhost dev complete             |
-| 10–15 | Task 4: Handlers + Workflow | Routes wired, first job runs through workflow engine           |
-| 16–19 | Task 5: VCD Client          | VCD calls working, client docs in README                      |
-| 20–24 | Task 6: Other Clients       | All integrations stubbed, env var table complete               |
-| 25–27 | Task 7: Full Handlers       | End-to-end flows working, flow diagram in README               |
-| 28–33 | Task 8: Deploy              | Docker Compose on dev/prod, CI runner, auto-deploy, backups    |
-| 34–36 | Task 9: Polish              | Containers, CI, security review, runbook in README             |
-
-**Total: ~36 working days (~7 weeks solo)**
+| Task                        | Status | Description                                                   |
+| --------------------------- | ------ | ------------------------------------------------------------- |
+| Task 1: Init                | ✅     | Repo created, service runs, /ready works, README started      |
+| Task 2: Local Docker        | ✅     | Postgres in Docker Compose, DATABASE_URL wired                |
+| Task 3: DB + River          | ✅     | /ready and /health ping DB, localhost dev complete             |
+| Task 4: Handlers + Workflow | ✅     | Routes wired, first job runs through workflow engine           |
+| Task 5: VCD Client          | ✅     | VCD calls working, client docs in README                      |
+| Task 6: Other Clients       |        | All integrations stubbed, env var table complete               |
+| Task 7: Full Handlers       |        | End-to-end flows working, flow diagram in README               |
+| Task 8: Deploy              |        | Docker Compose on dev/prod, CI runner, auto-deploy, backups    |
+| Task 9: Polish              |        | Containers, CI, security review, runbook in README             |
 
 ---
 
@@ -168,17 +166,17 @@ hbsqueue/
 
 ## TODO Files
 
-| File                                                       | Task | Days  | Focus                             |
-| ---------------------------------------------------------- | ---- | ----- | --------------------------------- |
-| [01_init.md](./01_init.md)                                 | 1    | 1–3   | Repo, scaffold, HTTP service      |
-| [02_localhost.md](./02_localhost.md)                        | 2    | 4–5   | Local Postgres in Docker          |
-| [03_db_river.md](./03_db_river.md)                         | 3    | 6–9   | DB package, River client          |
-| [04_jobs_workflow.md](./04_jobs_workflow.md)                | 4    | 10–15 | Handlers + Jobs + Workflow engine |
-| [05_vcd_client.md](./05_vcd_client.md)                     | 5    | 16–19 | VCD client                        |
-| [06_other_clients.md](./06_other_clients.md)               | 6    | 20–24 | Keycloak, Zerto, HB, AD           |
-| [07_integration.md](./07_integration.md)                   | 7    | 25–27 | Full handlers + integration       |
-| [08_deploy.md](./08_deploy.md)                     | 8    | 28–33 | Docker Compose + CI/CD + ops      |
-| [09_production_prep.md](./09_production_prep.md)           | 9    | 34–36 | Containers, CI, prod prep         |
+| File                                                       | Task | Status | Focus                             |
+| ---------------------------------------------------------- | ---- | ------ | --------------------------------- |
+| [01_init.md](./01_init.md)                                 | 1    | ✅     | Repo, scaffold, HTTP service      |
+| [02_localhost.md](./02_localhost.md)                        | 2    | ✅     | Local Postgres in Docker          |
+| [03_db_river.md](./03_db_river.md)                         | 3    | ✅     | DB package, River client          |
+| [04_jobs_workflow.md](./04_jobs_workflow.md)                | 4    | ✅     | Handlers + Jobs + Workflow engine |
+| [05_vcd_client.md](./05_vcd_client.md)                     | 5    | ✅     | VCD client                        |
+| [06_other_clients.md](./06_other_clients.md)               | 6    |        | Keycloak, Zerto, HB, AD           |
+| [07_integration.md](./07_integration.md)                   | 7    |        | Full handlers + integration       |
+| [08_deploy.md](./08_deploy.md)                             | 8    |        | Docker Compose + CI/CD + ops      |
+| [09_production_prep.md](./09_production_prep.md)           | 9    |        | Containers, CI, prod prep         |
 
 **Reference docs:**
 

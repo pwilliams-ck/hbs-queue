@@ -1,7 +1,7 @@
 # Task 4: Handler Structure + Jobs + Workflow Engine
 
-All routes wired with stub handlers, first job runs
-end-to-end through the workflow engine. API surface and workflow docs in README.
+All routes wired with stub handlers, first job runs end-to-end through the
+workflow engine. API surface and workflow docs in README.
 
 > See `docs/db-schema-01.md` for the `workflows` table schema and the JSONB
 > accumulator pattern - the workflow engine reads and writes this table as
@@ -220,11 +220,11 @@ On-demand profiling (flame graph / trace — run from terminal):
 
 ```
 [✅] make test → all pass (stubs return 501 as expected)
-[ ] Insert job manually via psql
-[ ] Verify River worker picks it up
-[ ] Verify workflow_state row is created and updated at each step
-[ ] make test → all pass
-[ ] ✅ Milestone: full route surface wired, first job runs through workflow engine
+[✅] Insert job manually via psql
+[✅] Verify River worker picks it up
+[✅] Verify workflow_state row is created and updated at each step
+[✅] make test → all pass
+[✅] Full route surface wired, first job runs through workflow engine
 ```
 
 ---
@@ -235,18 +235,18 @@ On-demand profiling (flame graph / trace — run from terminal):
 
 HostBill's Script Provisioner always sends the same payload regardless of
 whether the customer is new or existing. The onboard-org workflow with
-idempotent steps handles both cases naturally — each step checks external
-system state and either performs the operation or skips. A separate
-provision-vdc route/job had no distinct HostBill trigger and was removed.
+idempotent steps handles both cases naturally — each step checks external system
+state and either performs the operation or skips. A separate provision-vdc
+route/job had no distinct HostBill trigger and was removed.
 
 ### crm_id JSON tag
 
-HostBill sends the client ID field as `crm_id`. OnboardOrgArgs and request
-types use this tag to match the actual payload.
+HostBill sends the client ID field as `crm_id`. OnboardOrgArgs and request types
+use this tag to match the actual payload.
 
 ### No order_id on onboard-org
 
-The old HostBill handler did not receive an order_id. The field was removed
-from OnboardOrgArgs and from the runner.Run() signature. The workflow_state
-table still has the nullable order_id column for other workflow types that
-may need it (e.g. update_bandwidth).
+The old HostBill handler did not receive an order_id. The field was removed from
+OnboardOrgArgs and from the runner.Run() signature. The workflow_state table
+still has the nullable order_id column for other workflow types that may need it
+(e.g. update_bandwidth).

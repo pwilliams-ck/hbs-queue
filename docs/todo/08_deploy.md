@@ -297,6 +297,6 @@ Future:
 [ ] ./scripts/db-backup.sh → creates timestamped dump + copies to backup01
 [ ] ./scripts/db-restore.sh <dump> --yes → restores successfully
 [ ] Backup cron runs, copies 1 + 2 verified
-[ ] ✅ Milestone: dev host live, Docker Compose running, blue/green app deploys,
+[ ] Dev host live, Docker Compose running, blue/green app deploys,
     restore-verified backups, CI/CD pipeline working end-to-end
 ```

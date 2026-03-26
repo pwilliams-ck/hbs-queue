@@ -12,7 +12,7 @@ export HOOK_SECRET_DEBOARD_CONTACT=
 export HOOK_SECRET_UPDATE_PW=
 export HOOK_SECRET_UPDATE_BANDWIDTH=
 
-# Debug/profiling listener port (not exposed via k3s Service).
+# Debug/profiling listener port (internal only).
 export DEBUG_PORT=6061
 
 # VMware Cloud Director API.

@@ -1,12 +1,18 @@
 # hbsqueue
 
 HostBill Service Queue orchestrates tenant provisioning and management workflows
-across VCD, Zerto, Keycloak, HostBill, and Active Directory.
+across VCD, Zerto, Keycloak, HostBill, and Active Directory. Reddit CAPI is also
+included for advertisement sales conversation rates.
 
 Built on [River](https://riverqueue.com), a Postgres-backed job queue for Go.
 
-`docs/` contains additional information about architecture, deployment, full API
-surface with OpenAPI Swagger, etc.
+**[Deployment Architecture](docs/deploy-architecture.md)** includes Docker
+Compose, blue/green deploys with automated rollbacks, dedicated CI/CD GitHub
+Actions runner (self-hosted), and 3-2-1-1-0 database backup strategy with
+restore verification.
+
+`docs/` contains diagrams and additional information about architecture,
+deployment, full API surface with OpenAPI Swagger, etc.
 
 ## Table of Contents
 
@@ -32,8 +38,10 @@ surface with OpenAPI Swagger, etc.
 
 ## Requirements
 
+- Git
+- Make
+- Direnv (dev only)
 - Go 1.26+
-- PostgreSQL 18+
 - Docker Compose
 
 ## Getting Started
@@ -42,8 +50,8 @@ surface with OpenAPI Swagger, etc.
 git clone https://github.com/CloudKey-io/hbs-queue.git
 cd hbs-queue
 cp .envrc.example .envrc
-direnv allow  # or: source .envrc
-docker compose up -d
+direnv allow  # or: source .envrc if no direnv
+make dev-up
 make run
 ```
 
@@ -58,32 +66,37 @@ curl -X POST localhost:8080/api/v1/echo \
   -d '{"message": "hello"}'
 ```
 
+You can also go to the Swagger UI page to test API functionality.
+
 ## Configuration
 
 All configuration is via environment variables.
 
-| Variable                       | Default | Description                         |
-| ------------------------------ | ------- | ----------------------------------- |
-| `PORT`                         | `8080`  | HTTP listen port                    |
+| Variable                       | Default     | Description                                |
+| ------------------------------ | ----------- | ------------------------------------------ |
+| `PORT`                         | `8080`      | HTTP listen port                           |
 | `ENV`                          | `localhost` | Environment (`localhost` / `dev` / `prod`) |
-| `API_KEY`                      |         | Required for `/api/v1/*` routes     |
-| `DATABASE_URL`                 |         | Postgres connection string          |
-| `HOOK_SECRET_DEBOARD_ORG`      |         | HMAC secret for deboard-org webhook |
-| `HOOK_SECRET_ONBOARD_CONTACT`  |         | HMAC secret for onboard-contact     |
-| `HOOK_SECRET_DEBOARD_CONTACT`  |         | HMAC secret for deboard-contact     |
-| `HOOK_SECRET_UPDATE_PW`        |         | HMAC secret for update-pw           |
-| `HOOK_SECRET_UPDATE_BANDWIDTH` |         | HMAC secret for update-bandwidth    |
-| `DEBUG_PORT`                   | `6061`  | Debug/profiling listener port       |
-| `SWAGGER_PORT`                 | `8081`  | Swagger UI port (logged at startup) |
+| `API_KEY`                      |             | Required for `/api/v1/*` routes            |
+| `DATABASE_URL`                 |             | Postgres connection string                 |
+| `HOOK_SECRET_DEBOARD_ORG`      |             | HMAC secret for deboard-org                |
+| `HOOK_SECRET_ONBOARD_CONTACT`  |             | HMAC secret for onboard-contact            |
+| `HOOK_SECRET_DEBOARD_CONTACT`  |             | HMAC secret for deboard-contact            |
+| `HOOK_SECRET_UPDATE_PW`        |             | HMAC secret for update-pw                  |
+| `HOOK_SECRET_UPDATE_BANDWIDTH` |             | HMAC secret for update-bandwidth           |
+| `DEBUG_PORT`                   | `6061`      | Debug/profiling dashboard                  |
+| `SWAGGER_PORT`                 | `8081`      | Swagger UI port (logged at startup)        |
 
 ## Docker Compose
+
+Check the `Makefile` to see raw Docker Compose commands.
 
 Nginx, Postgres, Swagger UI, and hbsqueue run in Docker Compose:
 
 ```sh
-docker compose up -d        # start Postgres + Swagger UI
-docker compose ps           # check status
-docker compose down         # stop services
+make dev-up      # start Postgres + Swagger UI, wait for ready
+make dev-down    # stop services
+make dev-reset   # stop services and wipe DB
+make dev-logs    # tail container logs
 ```
 
 - Postgres: `localhost:5432` (user: `hbsqueue`, db: `hbsqueue_dev`)
@@ -187,7 +200,7 @@ type Step interface {
 }
 ```
 
-Steps must be idempotent — the runner may re-execute a step on retry.
+**Steps must be idempotent**: The runner may re-execute a step on retry.
 
 ### Resume After Restart
 
@@ -205,10 +218,10 @@ they produce (`state.Set("key", value)`).
 
 | Job Type           | Args Struct           | Enqueued By                       |
 | ------------------ | --------------------- | --------------------------------- |
-| `onboard_customer` | `OnboardOrgArgs`      | POST `/api/v1/script/onboard-org` |
-| `deboard_customer` | `DeboardOrgArgs`      | POST `/hooks/deboard-org`         |
-| `add_contact`      | `AddContactArgs`      | POST `/hooks/onboard-contact`     |
-| `delete_contact`   | `DeleteContactArgs`   | POST `/hooks/deboard-contact`     |
+| `onboard_org`      | `OnboardOrgArgs`      | POST `/api/v1/script/onboard-org` |
+| `deboard_org`      | `DeboardOrgArgs`      | POST `/hooks/deboard-org`         |
+| `onboard_contact`  | `AddContactArgs`      | POST `/hooks/onboard-contact`     |
+| `deboard_contact`  | `DeleteContactArgs`   | POST `/hooks/deboard-contact`     |
 | `update_pw`        | `UpdatePwArgs`        | POST `/hooks/update-pw`           |
 | `update_bandwidth` | `UpdateBandwidthArgs` | POST `/hooks/update-bandwidth`    |
 
@@ -218,14 +231,14 @@ they produce (`state.Set("key", value)`).
 INSERT INTO river_job (args, kind, queue, state, max_attempts, priority, created_at, scheduled_at)
 VALUES (
   '{"crm_id":"test001","organization_name":"TestCorp","client_username":"testuser","client_first_name":"Test","client_last_name":"User","client_email":"test@example.com","account_id":1,"country":"US","state":"Texas","postal_code":"75074","max_zerto_storage":50,"max_zerto_vms":5,"bandwidth":"100","product_id":"web-1"}',
-  'onboard_customer', 'default', 'available', 3, 1, now(), now()
+  'onboard_org', 'default', 'available', 3, 1, now(), now()
 );
 ```
 
 ## Debug / Profiling
 
-A separate listener on `DEBUG_PORT` (default 6061) serves diagnostics.
-Available in all environments (local, dev, prod).
+A separate listener on `DEBUG_PORT` (default 6061) serves diagnostics. Available
+in all environments (local, dev, prod).
 
 | Endpoint                         | Description                   |
 | -------------------------------- | ----------------------------- |

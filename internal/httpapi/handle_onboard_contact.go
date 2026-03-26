@@ -5,7 +5,7 @@ import (
 )
 
 // handleOnboardContact processes an onboard-contact webhook from HostBill.
-// Enqueues an add_contact River job that creates the contact's accounts
+// Enqueues an onboard_contact River job that creates the contact's accounts
 // in Keycloak and Active Directory under the parent tenant.
 //
 // Request:  POST /hooks/onboard-contact (JSON body, webhook HMAC auth)

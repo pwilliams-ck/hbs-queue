@@ -3,9 +3,9 @@
 // workflow type in the workflow_state table.
 package jobs
 
-// OnboardOrgArgs is the payload for the onboard_customer job.
+// OnboardOrgArgs is the payload for the onboard_org job.
 // Enqueued by POST /api/v1/script/onboard-org.
-// Maps to workflow type "onboard_customer".
+// Maps to workflow type "onboard_org".
 type OnboardOrgArgs struct {
 	ClientID         string `json:"crm_id"`
 	OrganizationName string `json:"organization_name"`
@@ -23,23 +23,23 @@ type OnboardOrgArgs struct {
 	ProductID        string `json:"product_id"`
 }
 
-// Kind returns the River job kind for onboard_customer jobs.
-func (OnboardOrgArgs) Kind() string { return "onboard_customer" }
+// Kind returns the River job kind for onboard_org jobs.
+func (OnboardOrgArgs) Kind() string { return "onboard_org" }
 
-// DeboardOrgArgs is the payload for the deboard_customer job.
+// DeboardOrgArgs is the payload for the deboard_org job.
 // Enqueued by POST /hooks/deboard-org.
-// Maps to workflow type "deboard_customer".
+// Maps to workflow type "deboard_org".
 type DeboardOrgArgs struct {
 	ClientID         string `json:"client_id"`
 	OrganizationName string `json:"organization_name"`
 }
 
-// Kind returns the River job kind for deboard_customer jobs.
-func (DeboardOrgArgs) Kind() string { return "deboard_customer" }
+// Kind returns the River job kind for deboard_org jobs.
+func (DeboardOrgArgs) Kind() string { return "deboard_org" }
 
-// AddContactArgs is the payload for the add_contact job.
+// AddContactArgs is the payload for the onboard_contact job.
 // Enqueued by POST /hooks/onboard-contact.
-// Maps to workflow type "add_contact".
+// Maps to workflow type "onboard_contact".
 type AddContactArgs struct {
 	ClientID  string `json:"client_id"`
 	ContactID string `json:"contact_id"`
@@ -48,19 +48,19 @@ type AddContactArgs struct {
 	Email     string `json:"email"`
 }
 
-// Kind returns the River job kind for add_contact jobs.
-func (AddContactArgs) Kind() string { return "add_contact" }
+// Kind returns the River job kind for onboard_contact jobs.
+func (AddContactArgs) Kind() string { return "onboard_contact" }
 
-// DeleteContactArgs is the payload for the delete_contact job.
+// DeleteContactArgs is the payload for the deboard_contact job.
 // Enqueued by POST /hooks/deboard-contact.
-// Maps to workflow type "delete_contact".
+// Maps to workflow type "deboard_contact".
 type DeleteContactArgs struct {
 	ClientID  string `json:"client_id"`
 	ContactID string `json:"contact_id"`
 }
 
-// Kind returns the River job kind for delete_contact jobs.
-func (DeleteContactArgs) Kind() string { return "delete_contact" }
+// Kind returns the River job kind for deboard_contact jobs.
+func (DeleteContactArgs) Kind() string { return "deboard_contact" }
 
 // UpdatePwArgs is the payload for the update_pw job.
 // Enqueued by POST /hooks/update-pw.

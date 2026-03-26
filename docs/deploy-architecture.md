@@ -91,8 +91,8 @@ feature branch → PR → merge to main → auto-deploy to dev
 ```
 
 Tagged releases build a versioned image and push it to GHCR. Prod deployment is
-not automated yet. When a prod host is provisioned on the `10.25.0.0/16` network,
-the tag workflow will be extended to SSH and deploy there.
+not automated yet. When a prod host is provisioned on the `10.25.0.0/16`
+network, the tag workflow will be extended to SSH and deploy there.
 
 ## Branch Protection
 

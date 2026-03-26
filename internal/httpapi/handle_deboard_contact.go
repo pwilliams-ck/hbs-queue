@@ -5,7 +5,7 @@ import (
 )
 
 // handleDeboardContact processes a deboard-contact webhook from HostBill.
-// Enqueues a delete_contact River job that removes the contact's accounts
+// Enqueues a deboard_contact River job that removes the contact's accounts
 // from Keycloak and Active Directory.
 //
 // Request:  POST /hooks/deboard-contact (JSON body, webhook HMAC auth)

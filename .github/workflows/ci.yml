@@ -9,6 +9,20 @@ on:
 jobs:
   test:
     runs-on: [self-hosted, linux]
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: hbsqueue
+          POSTGRES_PASSWORD: ci-password
+          POSTGRES_DB: hbsqueue_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U hbsqueue -d hbsqueue_test"
+          --health-interval 5s --health-timeout 3s --health-retries 5
+    env:
+      DATABASE_URL: postgres://hbsqueue:ci-password@localhost:5432/hbsqueue_test?sslmode=disable
     steps:
       - uses: actions/checkout@v4
 
@@ -23,9 +37,3 @@ jobs:
 
       - name: Test
         run: go test -v -race -coverprofile=coverage.out ./...
-
-      - name: Upload coverage
-        uses: codecov/codecov-action@v4
-        with:
-          files: coverage.out
-        continue-on-error: true

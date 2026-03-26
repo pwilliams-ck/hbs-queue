@@ -90,7 +90,7 @@ const dashboardHTML = `<!DOCTYPE html>
 <body>
 <h1>hbs-queue debug</h1>
 <div class="status">
-  refreshing every <span id="interval">10</span>s
+  next refresh in <span id="countdown">10</span>s
   <span id="error"></span>
 </div>
 
@@ -116,8 +116,16 @@ const dashboardHTML = `<!DOCTYPE html>
 <script>
 (function() {
   const params = new URLSearchParams(window.location.search);
-  const interval = parseInt(params.get('interval') || '10', 10) * 1000;
-  document.getElementById('interval').textContent = interval / 1000;
+  const intervalSec = parseInt(params.get('interval') || '10', 10);
+  const interval = intervalSec * 1000;
+  var remaining = intervalSec;
+  const countdownEl = document.getElementById('countdown');
+
+  setInterval(function() {
+    remaining--;
+    if (remaining < 0) remaining = intervalSec;
+    countdownEl.textContent = remaining;
+  }, 1000);
 
   function fmt(n) {
     if (typeof n !== 'number') return String(n);
@@ -136,6 +144,8 @@ const dashboardHTML = `<!DOCTYPE html>
   }
 
   function refresh() {
+    remaining = intervalSec;
+    countdownEl.textContent = remaining;
     fetch('/debug/vars')
       .then(function(r) { return r.json(); })
       .then(function(data) {

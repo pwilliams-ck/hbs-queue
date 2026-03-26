@@ -30,7 +30,7 @@ func NewServer(
 	var handler http.Handler = mux
 	handler = panicRecovery(handler, logger)
 	handler = requestLogger(handler, logger)
-	if cfg.Env == "dev" {
+	if cfg.Env != "prod" {
 		handler = devCORS(handler)
 	}
 	handler = requestID(handler)

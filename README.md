@@ -62,18 +62,19 @@ curl -X POST localhost:8080/api/v1/echo \
 
 All configuration is via environment variables.
 
-| Variable                      | Default | Description                           |
-| ----------------------------- | ------- | ------------------------------------- |
-| `PORT`                        | `8080`  | HTTP listen port                      |
-| `ENV`                         | `dev`   | Environment (`dev` / `prod`)          |
-| `API_KEY`                     |         | Required for `/api/v1/*` routes       |
-| `DATABASE_URL`                |         | Postgres connection string            |
-| `HOOK_SECRET_DEBOARD_ORG`     |         | HMAC secret for deboard-org webhook   |
-| `HOOK_SECRET_ONBOARD_CONTACT` |         | HMAC secret for onboard-contact       |
-| `HOOK_SECRET_DEBOARD_CONTACT` |         | HMAC secret for deboard-contact       |
-| `HOOK_SECRET_UPDATE_PW`       |         | HMAC secret for update-pw             |
-| `HOOK_SECRET_UPDATE_BANDWIDTH`|         | HMAC secret for update-bandwidth      |
-| `DEBUG_PORT`                  | `6061`  | Debug/profiling listener port         |
+| Variable                       | Default | Description                         |
+| ------------------------------ | ------- | ----------------------------------- |
+| `PORT`                         | `8080`  | HTTP listen port                    |
+| `ENV`                          | `localhost` | Environment (`localhost` / `dev` / `prod`) |
+| `API_KEY`                      |         | Required for `/api/v1/*` routes     |
+| `DATABASE_URL`                 |         | Postgres connection string          |
+| `HOOK_SECRET_DEBOARD_ORG`      |         | HMAC secret for deboard-org webhook |
+| `HOOK_SECRET_ONBOARD_CONTACT`  |         | HMAC secret for onboard-contact     |
+| `HOOK_SECRET_DEBOARD_CONTACT`  |         | HMAC secret for deboard-contact     |
+| `HOOK_SECRET_UPDATE_PW`        |         | HMAC secret for update-pw           |
+| `HOOK_SECRET_UPDATE_BANDWIDTH` |         | HMAC secret for update-bandwidth    |
+| `DEBUG_PORT`                   | `6061`  | Debug/profiling listener port       |
+| `SWAGGER_PORT`                 | `8081`  | Swagger UI port (logged at startup) |
 
 ## Docker Compose
 
@@ -130,25 +131,25 @@ docs/
 
 See [`docs/openapi.yaml`](docs/openapi.yaml) for full specification.
 
-| Method | Path                             | Auth    | Description                 |
-| ------ | -------------------------------- | ------- | --------------------------- |
-| GET    | `/ready`                         | none    | Readiness probe (pings DB)  |
-| GET    | `/health`                        | none    | Build info + DB status      |
-| POST   | `/api/v1/echo`                   | API key | Echo test                   |
-| POST   | `/api/v1/script/onboard-org`     | API key | Enqueue tenant onboarding   |
-| POST   | `/hooks/deboard-org`             | Webhook | Deboard tenant              |
-| POST   | `/hooks/onboard-contact`         | Webhook | Add contact                 |
-| POST   | `/hooks/deboard-contact`         | Webhook | Remove contact              |
-| POST   | `/hooks/update-pw`               | Webhook | Password change             |
-| POST   | `/hooks/update-bandwidth`        | Webhook | Update bandwidth            |
+| Method | Path                         | Auth    | Description                |
+| ------ | ---------------------------- | ------- | -------------------------- |
+| GET    | `/ready`                     | none    | Readiness probe (pings DB) |
+| GET    | `/health`                    | none    | Build info + DB status     |
+| POST   | `/api/v1/echo`               | API key | Echo test                  |
+| POST   | `/api/v1/script/onboard-org` | API key | Enqueue tenant onboarding  |
+| POST   | `/hooks/deboard-org`         | Webhook | Deboard tenant             |
+| POST   | `/hooks/onboard-contact`     | Webhook | Add contact                |
+| POST   | `/hooks/deboard-contact`     | Webhook | Remove contact             |
+| POST   | `/hooks/update-pw`           | Webhook | Password change            |
+| POST   | `/hooks/update-bandwidth`    | Webhook | Update bandwidth           |
 
 **Auth types:**
 
 - **API key** — `X-API-Key` header, constant-time comparison.
 - **Webhook** — HostBill HMAC-SHA256. Signature is computed over
-  `HB-Timestamp + request body` using the per-hook secret. Headers:
-  `HB-Hook`, `HB-Event`, `HB-Timestamp`, `HB-Signature`. Requests older
-  than 60 seconds are rejected.
+  `HB-Timestamp + request body` using the per-hook secret. Headers: `HB-Hook`,
+  `HB-Event`, `HB-Timestamp`, `HB-Signature`. Requests older than 60 seconds are
+  rejected.
 
 ### Example Responses
 
@@ -172,8 +173,8 @@ See [`docs/openapi.yaml`](docs/openapi.yaml) for full specification.
 
 ## Workflow Engine
 
-Each API endpoint enqueues a River job. Workers execute workflows as a
-sequence of steps, with progress tracked in the `workflow_state` table.
+Each API endpoint enqueues a River job. Workers execute workflows as a sequence
+of steps, with progress tracked in the `workflow_state` table.
 
 ### Step Interface
 
@@ -190,27 +191,26 @@ Steps must be idempotent — the runner may re-execute a step on retry.
 
 ### Resume After Restart
 
-`current_step` in the DB records the last completed step index. On retry,
-the runner skips completed steps and resumes from `current_step`. State
-updates are transactional, so a crash mid-step causes only that step to
-re-run.
+`current_step` in the DB records the last completed step index. On retry, the
+runner skips completed steps and resumes from `current_step`. State updates are
+transactional, so a crash mid-step causes only that step to re-run.
 
 ### JSONB Accumulator
 
 The `data` column starts with the HostBill payload and grows as each step
-completes. Steps read what they need (`state.GetString("key")`) and write
-what they produce (`state.Set("key", value)`).
+completes. Steps read what they need (`state.GetString("key")`) and write what
+they produce (`state.Set("key", value)`).
 
 ### Job Types
 
-| Job Type           | Args Struct           | Enqueued By                        |
-| ------------------ | --------------------- | ---------------------------------- |
-| `onboard_customer` | `OnboardOrgArgs`      | POST `/api/v1/script/onboard-org`  |
-| `deboard_customer` | `DeboardOrgArgs`      | POST `/hooks/deboard-org`          |
-| `add_contact`      | `AddContactArgs`      | POST `/hooks/onboard-contact`      |
-| `delete_contact`   | `DeleteContactArgs`   | POST `/hooks/deboard-contact`      |
-| `update_pw`        | `UpdatePwArgs`        | POST `/hooks/update-pw`            |
-| `update_bandwidth` | `UpdateBandwidthArgs` | POST `/hooks/update-bandwidth`     |
+| Job Type           | Args Struct           | Enqueued By                       |
+| ------------------ | --------------------- | --------------------------------- |
+| `onboard_customer` | `OnboardOrgArgs`      | POST `/api/v1/script/onboard-org` |
+| `deboard_customer` | `DeboardOrgArgs`      | POST `/hooks/deboard-org`         |
+| `add_contact`      | `AddContactArgs`      | POST `/hooks/onboard-contact`     |
+| `delete_contact`   | `DeleteContactArgs`   | POST `/hooks/deboard-contact`     |
+| `update_pw`        | `UpdatePwArgs`        | POST `/hooks/update-pw`           |
+| `update_bandwidth` | `UpdateBandwidthArgs` | POST `/hooks/update-bandwidth`    |
 
 ### Manual Test Job
 
@@ -225,15 +225,15 @@ VALUES (
 ## Debug / Profiling
 
 A separate listener on `DEBUG_PORT` (default 6061) serves diagnostics.
-Not exposed via k3s Service — internal use only.
+Available in all environments (local, dev, prod).
 
-| Endpoint                                | Description                    |
-| --------------------------------------- | ------------------------------ |
-| `/debug/dashboard`                      | Live metrics dashboard         |
-| `/debug/pprof/`                         | pprof index                    |
-| `/debug/pprof/goroutine?debug=1`        | Current goroutine stacks       |
-| `/debug/pprof/goroutineleak`            | Leaked goroutines (Go 1.26)    |
-| `/debug/vars`                           | expvar + runtime metrics JSON  |
+| Endpoint                         | Description                   |
+| -------------------------------- | ----------------------------- |
+| `/debug/dashboard`               | Live metrics dashboard        |
+| `/debug/pprof/`                  | pprof index                   |
+| `/debug/pprof/goroutine?debug=1` | Current goroutine stacks      |
+| `/debug/pprof/goroutineleak`     | Leaked goroutines (Go 1.26)   |
+| `/debug/vars`                    | expvar + runtime metrics JSON |
 
 On-demand profiling (flame graph / trace):
 

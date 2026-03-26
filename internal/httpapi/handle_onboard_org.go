@@ -12,7 +12,7 @@ import (
 	"github.com/CloudKey-io/hbs-queue/internal/jobs"
 )
 
-// handleOnboardOrg enqueues an onboard_customer River job from a
+// handleOnboardOrg enqueues an onboard_org River job from a
 // script-provisioning request. Called by HostBill's Script Provisioner
 // module when a new VCD tenant order is created.
 //
@@ -57,7 +57,7 @@ func handleOnboardOrg(logger *slog.Logger, pool *pgxpool.Pool, riverClient *rive
 			"vcd_org_name", org.Name,
 		)
 
-		// Enqueue the onboard_customer job inside a transaction.
+		// Enqueue the onboard_org job inside a transaction.
 		tx, err := pool.Begin(r.Context())
 		if err != nil {
 			logger.Error("begin tx for enqueue failed", "err", err)
@@ -83,7 +83,7 @@ func handleOnboardOrg(logger *slog.Logger, pool *pgxpool.Pool, riverClient *rive
 			ProductID:        req.ProductID,
 		}, nil)
 		if err != nil {
-			logger.Error("enqueue onboard_customer failed", "crm_id", req.ClientID, "err", err)
+			logger.Error("enqueue onboard_org failed", "crm_id", req.ClientID, "err", err)
 			encode(w, r, http.StatusInternalServerError, ErrorResponse{Error: "failed to enqueue job"})
 			return
 		}
@@ -94,7 +94,7 @@ func handleOnboardOrg(logger *slog.Logger, pool *pgxpool.Pool, riverClient *rive
 			return
 		}
 
-		logger.Info("onboard_customer job enqueued",
+		logger.Info("onboard_org job enqueued",
 			"job_id", insertedJob.Job.ID,
 			"crm_id", req.ClientID,
 		)

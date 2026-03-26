@@ -13,7 +13,7 @@ import (
 	"github.com/CloudKey-io/hbs-queue/internal/workflow"
 )
 
-// OnboardOrgWorker processes onboard_customer jobs enqueued by
+// OnboardOrgWorker processes onboard_org jobs enqueued by
 // POST /api/v1/script/onboard-org. It uses the workflow runner to
 // execute steps in order, resuming from current_step on retry.
 //
@@ -51,7 +51,7 @@ func NewOnboardOrgWorker(pool *pgxpool.Pool, repo workflow.Repository, vcdClient
 	}
 }
 
-// Work processes a single onboard_customer job. It opens a transaction,
+// Work processes a single onboard_org job. It opens a transaction,
 // runs the workflow steps, and commits on success.
 func (w *OnboardOrgWorker) Work(ctx context.Context, job *river.Job[OnboardOrgArgs]) error {
 	tx, err := w.pool.Begin(ctx)
@@ -77,7 +77,7 @@ func (w *OnboardOrgWorker) Work(ctx context.Context, job *river.Job[OnboardOrgAr
 	}
 
 	runner := workflow.NewRunner(w.repo, steps, w.logger)
-	if err := runner.Run(ctx, tx, job.ID, "onboard_customer", job.Args.ClientID, initialData); err != nil {
+	if err := runner.Run(ctx, tx, job.ID, "onboard_org", job.Args.ClientID, initialData); err != nil {
 		return err
 	}
 

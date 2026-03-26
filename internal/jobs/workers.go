@@ -15,7 +15,7 @@ import (
 // when River starts processing.
 //
 // Registered workers:
-//   - OnboardOrgWorker → onboard_customer jobs
+//   - OnboardOrgWorker → onboard_org jobs
 //
 // Additional workers will be registered as their workflows are
 // implemented in Tasks 5-7.

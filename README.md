@@ -2,7 +2,7 @@
 
 HostBill Service Queue orchestrates tenant provisioning and management workflows
 across VCD, Zerto, Keycloak, HostBill, and Active Directory. Reddit CAPI is also
-included for advertisement sales conversation rates.
+included for advertisement sales conversion rates.
 
 Built on [River](https://riverqueue.com), a Postgres-backed job queue for Go.
 
@@ -66,7 +66,8 @@ curl -X POST localhost:8080/api/v1/echo \
   -d '{"message": "hello"}'
 ```
 
-You can also go to the Swagger UI page to test API functionality.
+You can also go to [Swagger UI](http://localhost:8081) to test API
+functionality.
 
 ## Configuration
 
@@ -88,9 +89,10 @@ All configuration is via environment variables.
 
 ## Docker Compose
 
-Check the `Makefile` to see raw Docker Compose commands.
-
-Nginx, Postgres, Swagger UI, and hbsqueue run in Docker Compose:
+Locally, Docker Compose runs Postgres and Swagger UI. In dev/prod, the compose
+stack also includes Nginx (reverse proxy for blue/green deploys) and the
+hbsqueue app containers. See
+[deploy-architecture.md](docs/deploy-architecture.md) for details.
 
 ```sh
 make dev-up      # start Postgres + Swagger UI, wait for ready
@@ -134,7 +136,7 @@ internal/
   db/                pgxpool, River client, migrations
   jobs/              River job arg types and workers
   workflow/          Step interface, workflow state repo, runner
-  clients/           (future) VCD, Zerto, Keycloak, HostBill, AD
+  clients/           VCD, Zerto, Keycloak, HostBill, AD, Reddit (in progress)
 docs/
   openapi.yaml       API specification
   todo/              task tracking and reference docs

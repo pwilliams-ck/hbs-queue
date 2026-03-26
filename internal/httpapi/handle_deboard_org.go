@@ -4,8 +4,8 @@ import (
 	"net/http"
 )
 
-// handleDeboardOrg processes a deboard_customer webhook from HostBill.
-// Enqueues a deboard_customer River job that tears down the tenant's
+// handleDeboardOrg processes a deboard_org webhook from HostBill.
+// Enqueues a deboard_org River job that tears down the tenant's
 // resources across VCD, Zerto, Keycloak, and Active Directory.
 //
 // Request:  POST /hooks/deboard-org (JSON body, webhook HMAC auth)

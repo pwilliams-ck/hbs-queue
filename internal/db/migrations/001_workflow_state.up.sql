@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS workflow_state (
     -- River job ID. Always unique — one workflow row per job.
     job_id         BIGINT         NOT NULL UNIQUE,
 
-    -- Workflow kind: onboard_customer, provision_vdc, deboard_customer, etc.
+    -- Workflow kind: onboard_org, deboard_org, onboard_contact, etc.
     workflow_type  VARCHAR(50)    NOT NULL,
 
     -- HostBill CRM ID — the primary business key used across all external

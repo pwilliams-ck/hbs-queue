@@ -1,9 +1,12 @@
 # Deployment Architecture
 
-HostBill Queue Service (hbs-queue) orchestrates customer onboarding and
-offboarding workflows across VCD, Zerto, Keycloak, HostBill, and Active
-Directory. It is a Go service backed by Postgres and
-[River](https://riverqueue.com) (a Postgres-backed job queue).
+HostBill Queue Service (hbsqueue) orchestrates customer onboarding and
+de-boarding workflows across VCD, Zerto, Keycloak, HostBill, and Active
+Directory. It also sends data to Reddit for calculating advertisement conversion
+rates.
+
+All 3 environments (localhost, dev, prod) all use Docker Compose. Custom shell
+scripting automates blue/green deployments and DB backups for dev/prod.
 
 This document describes how the service is built, deployed, and operated.
 
@@ -31,11 +34,9 @@ This document describes how the service is built, deployed, and operated.
   - [Traffic Flow (Dev Environment)](#traffic-flow-dev-environment)
   - [Required Firewall Rules (Dev)](#required-firewall-rules-dev)
   - [Prod Network (Future)](#prod-network-future)
-- [Scaling to Docker Swarm](#scaling-to-docker-swarm)
-  - [Additional Firewall Rules for Multi-Node Swarm](#additional-firewall-rules-for-multi-node-swarm)
 - [Secrets](#secrets)
   - [CI Secrets (GitHub Actions)](#ci-secrets-github-actions)
-  - [Runtime Secrets (Docker Swarm)](#runtime-secrets-docker-swarm)
+  - [Runtime Secrets (Docker Compose)](#runtime-secrets-docker-compose)
 - [Connecting to Services on docker01](#connecting-to-services-on-docker01)
 - [Rollback](#rollback)
 - [Troubleshooting](#troubleshooting)
@@ -53,12 +54,12 @@ This document describes how the service is built, deployed, and operated.
 
 ## Infrastructure
 
-| Host                            | Role               | Notes                                                                                                                             |
-| ------------------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
-| `ci01`                          | CI/CD server       | GitHub Actions self-hosted runner. Builds images, pushes to GHCR, triggers deploys via SSH. No application containers run here.   |
-| `docker01.mgmt.infra.ckdev.io`  | Application host   | Runs Postgres, Nginx, and the hbs-queue app containers. Single-node Docker Swarm (ready for multi-node expansion to docker02/03). |
-| Mgmt backup server              | Backup storage     | Receives copy 2 of database backups. Access method TBD (mount or rsync).                                                          |
-| `ghcr.io/cloudkey-io/hbs-queue` | Container registry | GitHub Container Registry. All images are built on ci01 and pulled by docker01.                                                   |
+| Host                            | Role               | Notes                                                                                                                           |
+| ------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| `ci01`                          | CI/CD server       | GitHub Actions self-hosted runner. Builds images, pushes to GHCR, triggers deploys via SSH. No application containers run here. |
+| `docker01.mgmt.infra.ckdev.io`  | Application host   | Runs Postgres, Nginx, Swagger UI, and the hbs-queue app containers via Docker Compose.                                          |
+| Mgmt backup server              | Backup storage     | Receives verified copy 2 of database backups. Access method TBD (mount or rsync).                                               |
+| `ghcr.io/cloudkey-io/hbs-queue` | Container registry | GitHub Container Registry. All images are built on ci01 and pulled by docker01.                                                 |
 
 ## Environments
 
@@ -66,15 +67,19 @@ Dev and prod are on **physically separate networks in different datacenters**.
 This is intentional, a misconfigured dev environment cannot reach prod data, and
 destructive testing in dev carries zero risk to production.
 
-| Environment | Network        | Hosts                                  | Deploys via     |
-| ----------- | -------------- | -------------------------------------- | --------------- |
-| Dev         | `10.42.0.0/16` | `docker01.mgmt.infra.ckdev.io`, `ci01` | Merge to `main` |
-| Prod        | `10.25.0.0/16` | TBD                                    | Tag `vX.X.X`    |
+All environments use Docker Compose for consistency — same tools, same layout,
+same deploy scripts.
+
+| Environment | Network        | Hosts                                     | Deploys via     |
+| ----------- | -------------- | ----------------------------------------- | --------------- |
+| Localhost   | `127.0.0.1`    | Developer workstation                     | `make run`      |
+| Dev         | `10.42.0.0/16` | `docker01.mgmt.infra.ckdev.io`, `ci01`    | Merge to `main` |
+| Prod        | `10.25.0.0/16` | `docker01.mgmt.infra.cloudkey.io,` `ci01` | Tag `vX.X.X`    |
 
 ### Promotion Flow
 
 ```
-feature branch → PR → merge to main → auto-deploy to dev (10.42)
+feature branch → PR → merge to main → auto-deploy to dev
                                           ↓
                                      test in dev
                                           ↓
@@ -82,11 +87,11 @@ feature branch → PR → merge to main → auto-deploy to dev (10.42)
                                           ↓
                               image tagged in GHCR (ready for prod)
                                           ↓
-                              deploy to prod (10.25) — not wired yet
+                              deploy to prod (10.25.0.0/16) — not wired yet
 ```
 
 Tagged releases build a versioned image and push it to GHCR. Prod deployment is
-not automated yet when a prod host is provisioned on the `10.25.0.0/16` network,
+not automated yet. When a prod host is provisioned on the `10.25.0.0/16` network,
 the tag workflow will be extended to SSH and deploy there.
 
 ## Branch Protection
@@ -112,15 +117,16 @@ un-reviewed code.
 2. Runs tests and linter
 3. Builds Docker image, tags with commit SHA
 4. Pushes to GHCR
-5. SSHs to docker01, pulls the new image, runs `bg-deploy.sh`
-6. Health check confirms `/ready` returns 200
+5. SSHs to docker01, runs `db-backup.sh` (pre-deploy safety net)
+6. Pulls the new image, runs `bg-deploy.sh`
+7. Health check confirms `/ready` returns 200
 
 ### Tag `vX.X.X` (Production Release)
 
-Same as above, but before deploying:
+Same as above, but:
 
-- Runs `db-backup.sh` on docker01 (pre-deploy safety net)
-- Image is tagged with the version number (e.g., `v1.2.0`)
+- Image is also tagged with the version number (e.g., `v1.2.0`)
+- Deploys to the prod host instead of docker01
 
 To trigger a release:
 
@@ -172,11 +178,17 @@ immutable, 0 unverified backups.
 | ---- | ----------------------------- | ---------------- |
 | 1    | docker01 local (`./backups/`) | `pg_dump` direct |
 
-Every backup is **restore-tested** before being copied anywhere. The script
-restores into a temporary database, runs a sanity check, then drops it. If
-verification fails, the dump is flagged and not propagated. This is the most
-valuable part of the strategy, without it, you could be backing up corrupted
-dumps for weeks without knowing.
+Every backup is **restore-tested** before being copied anywhere. The script:
+
+1. Runs `pg_dump` (compressed, timestamped)
+2. Restores into a temporary database
+3. Runs a sanity check (row counts, table existence)
+4. Drops the temporary database
+5. Only if verification passes, copies to backup server
+
+If verification fails, the dump is flagged and **not propagated**. This is the
+most valuable part of the strategy — without it, you could be backing up
+corrupted dumps for weeks without knowing.
 
 ### What's Planned (Future)
 
@@ -230,26 +242,46 @@ Dev Network (10.42.0.0/16)
   │                                   ├─ :8080  Nginx (reverse proxy)
   │                                   │    └─▶ app-blue or app-green (:8080 internal)
   │                                   │
-  │                                   ├─ :5432  Postgres (container-internal,
-  │                                   │         not exposed to host by default)
+  │                                   ├─ :8081  Swagger UI
   │                                   │
-  │                                   └─ :2377  Docker Swarm management
-  │                                      (only needed when adding docker02/03)
+  │                                   ├─ :6061  Debug / pprof (internal only)
+  │                                   │
+  │                                   └─ :5432  Postgres (container-internal,
+  │                                             not exposed to host by default)
   │
   └─ Mgmt backup server
-       └── receives backups from docker01 (mount or rsync, TBD)
+       └── receives verified backups from docker01 (mount or rsync, TBD)
 ```
 
-### Required Firewall Rules (dev)
+### Required Firewall Rules (Dev)
 
-| Source           | Destination             | Port | Protocol    | Purpose                                            |
-| ---------------- | ----------------------- | ---- | ----------- | -------------------------------------------------- |
-| ci01             | `github.com`, `ghcr.io` | 443  | TCP (HTTPS) | Pull jobs, push images                             |
-| ci01             | docker01                | 22   | TCP (SSH)   | Deploy commands                                    |
-| docker01         | `ghcr.io`               | 443  | TCP (HTTPS) | Pull container images                              |
-| docker01         | Mgmt backup server      | TBD  | TBD         | Backup copy 2                                      |
-| Internal clients | docker01                | 8080 | TCP (HTTP)  | Application access                                 |
-| docker01         | docker01                | 5432 | TCP         | App → Postgres (container-internal, stays on host) |
+**Inbound to docker01:**
+
+| Source           | Port | Protocol   | Purpose            |
+| ---------------- | ---- | ---------- | ------------------ |
+| ci01             | 22   | TCP (SSH)  | Deploy commands    |
+| Internal clients | 8080 | TCP (HTTP) | Application access |
+| Internal clients | 8081 | TCP (HTTP) | Swagger UI         |
+| Internal clients | 6061 | TCP (HTTP) | Debug / pprof      |
+
+**Outbound from docker01:**
+
+| Destination        | Port | Protocol    | Purpose               |
+| ------------------ | ---- | ----------- | --------------------- |
+| `ghcr.io`          | 443  | TCP (HTTPS) | Pull container images |
+| VCD endpoint       | 443  | TCP (HTTPS) | VCD API calls         |
+| Keycloak endpoint  | 8443 | TCP (HTTPS) | Keycloak API calls    |
+| Zerto endpoint     | 9989 | TCP (HTTPS) | Zerto API calls       |
+| Active Directory   | 389  | TCP         | LDAP                  |
+| Active Directory   | 636  | TCP         | LDAPS (TLS)           |
+| Mgmt backup server | TBD  | TBD         | Backup copy 2         |
+
+**Outbound from ci01:**
+
+| Destination             | Port | Protocol    | Purpose                |
+| ----------------------- | ---- | ----------- | ---------------------- |
+| `github.com`, `ghcr.io` | 443  | TCP (HTTPS) | Pull jobs, push images |
+| docker01                | 22   | TCP (SSH)   | Deploy commands        |
 
 Postgres is **not exposed** on the host network by default. The app containers
 connect via Docker's internal network. To connect manually for debugging, use
@@ -258,52 +290,8 @@ connect via Docker's internal network. To connect manually for debugging, use
 ### Prod Network (Future)
 
 Prod hosts will be on `10.25.0.0/16`. The same firewall rules apply — the prod
-Docker host needs outbound HTTPS to `ghcr.io` and inbound SSH from whatever runs
-the prod deploy (likely another ci01 for prod like in dev).
-
-## Scaling to Docker Swarm
-
-docker01 is initialized as a single-node swarm. The target topology is **3
-manager nodes** (docker01, docker02, docker03) to match the planned prod layout
-and validate multi-node behavior in dev before going live.
-
-> **Why 3?** Swarm manager quorum requires an odd number. Two managers is worse
-> than one (you need both up for quorum). Three gives you fault tolerance — one
-> node can die and the cluster keeps running.
-
-The swarm will host multiple services behind a shared Nginx reverse proxy:
-
-| Port  | Service    | Notes                                  |
-| ----- | ---------- | -------------------------------------- |
-| 8080  | hbs-queue  | Blue/green app deploys                 |
-| 8081  | TBD        | Reserved for future service            |
-| 443   | Keycloak   | If running Keycloak as containers      |
-
-Nginx routes by port or hostname to the appropriate service. This avoids
-Swarm's built-in routing mesh (ingress), which only offers basic round-robin
-with no health-check-aware routing or connection draining. At 3–5 services,
-Nginx config is easy to manage and gives full control over routing, TLS, rate
-limiting, and blue/green swaps.
-
-When docker02 and docker03 are ready:
-
-```sh
-# On docker02/03:
-docker swarm join --token <worker-or-manager-token> docker01:2377
-```
-
-The compose file gains `deploy:` directives (replicas, placement constraints,
-rolling update config). Postgres stays pinned to one node via placement
-constraint (it needs the named volume). App containers can float across nodes —
-Swarm schedules them.
-
-### Additional Firewall Rules for Multi-Node Swarm
-
-| Source      | Destination | Port | Protocol | Purpose                 |
-| ----------- | ----------- | ---- | -------- | ----------------------- |
-| Swarm nodes | Swarm nodes | 2377 | TCP      | Cluster management      |
-| Swarm nodes | Swarm nodes | 7946 | TCP/UDP  | Node discovery          |
-| Swarm nodes | Swarm nodes | 4789 | UDP      | Overlay network (VXLAN) |
+Docker host needs the same outbound access to external services and inbound SSH
+from whatever runs the prod deploy.
 
 ## Secrets
 
@@ -323,26 +311,44 @@ used during build and deploy, they never end up in the container image.
 Scoped per environment. When prod is added, a separate set will be created
 (e.g., `PROD_HOST`, `PROD_SSH_KEY`). Never reuse dev secrets in prod.
 
-### Runtime Secrets (Docker Swarm)
+### Runtime Secrets (Docker Compose)
 
-Application secrets (`API_KEY`, `DATABASE_URL`, etc.) are stored as Docker Swarm
-secrets and encrypted at rest in the Raft log, mounted as files at
-`/run/secrets/<name>`, and never visible in `docker inspect` or process
-listings. No plaintext `.env` files on disk.
+Application secrets (`API_KEY`, `DATABASE_URL`, webhook HMAC keys, client
+credentials) are stored as files on the host at `/opt/hbs-queue/secrets/`.
+Docker Compose mounts them into containers at `/run/secrets/<name>` using the
+`secrets` directive. They are not visible in `docker inspect` or process
+listings.
 
 ```sh
-# Create secrets on docker01 (swarm manager):
-echo "the-actual-api-key" | docker secret create api_key -
-echo "postgres://user:pass@postgres:5432/hbsqueue?sslmode=disable" | docker secret create database_url -
+# Create secret files on docker01 (chmod 600, owned by root):
+echo -n "the-actual-api-key" | sudo tee /opt/hbs-queue/secrets/api_key
+echo -n "postgres://user:pass@postgres:5432/hbsqueue?sslmode=disable" | sudo tee /opt/hbs-queue/secrets/database_url
+sudo chmod 600 /opt/hbs-queue/secrets/*
 ```
 
-| Secret         | Swarm Secret Name | Mount Path                  |
-| -------------- | ----------------- | --------------------------- |
-| `API_KEY`      | `api_key`         | `/run/secrets/api_key`      |
-| `DATABASE_URL` | `database_url`    | `/run/secrets/database_url` |
+In `docker-compose.prod.yml`:
 
-The app reads config from environment variables, so an entry point script
-bridges the gap it loads secret files into env vars before starting the binary:
+```yaml
+secrets:
+  api_key:
+    file: /opt/hbs-queue/secrets/api_key
+  database_url:
+    file: /opt/hbs-queue/secrets/database_url
+
+services:
+  app-blue:
+    secrets:
+      - api_key
+      - database_url
+```
+
+| Secret         | File on Host                          | Mount Path                  |
+| -------------- | ------------------------------------- | --------------------------- |
+| `API_KEY`      | `/opt/hbs-queue/secrets/api_key`      | `/run/secrets/api_key`      |
+| `DATABASE_URL` | `/opt/hbs-queue/secrets/database_url` | `/run/secrets/database_url` |
+
+The app reads config from environment variables, so an entrypoint script bridges
+the gap — it loads secret files into env vars before starting the binary:
 
 ```sh
 #!/bin/sh
@@ -353,16 +359,18 @@ exec /usr/local/bin/hbsqueue "$@"
 ```
 
 Non-sensitive config (`PORT`, `ENV`) stays in the compose file as regular
-environment variables, no need to put everything in secrets.
+environment variables — no need to put everything in secrets.
 
 ## Connecting to Services on docker01
 
-| Service         | Endpoint                                               |
-| --------------- | ------------------------------------------------------ |
-| App (via Nginx) | `http://docker01.mgmt.infra.ckdev.io:8080`             |
-| Readiness probe | `GET /ready`                                           |
-| Health check    | `GET /health`                                          |
-| Postgres        | Container-internal only. Use `docker exec` to connect. |
+| Service         | Endpoint                                                   |
+| --------------- | ---------------------------------------------------------- |
+| App (via Nginx) | `http://docker01.mgmt.infra.ckdev.io:8080`                 |
+| Swagger UI      | `http://docker01.mgmt.infra.ckdev.io:8081`                 |
+| Readiness probe | `GET /ready`                                               |
+| Health check    | `GET /health`                                              |
+| Debug dashboard | `http://docker01.mgmt.infra.ckdev.io:6061/debug/dashboard` |
+| Postgres        | Container-internal only. Use `docker exec` to connect.     |
 
 ## Rollback
 

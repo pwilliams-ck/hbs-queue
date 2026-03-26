@@ -13,9 +13,11 @@ LDFLAGS := -ldflags "\
 help:
 	@grep -E '^## ' $(MAKEFILE_LIST) | sed 's/## //' | column -t -s ':'
 
+SWAGGER_PORT ?= 8081
+
 ## run: start the service locally
 run:
-	@go run ./cmd/hbsqueue || true
+	@SWAGGER_PORT=$(SWAGGER_PORT) go run ./cmd/hbsqueue || true
 
 ## build: compile binary with version info into bin/
 build:
@@ -44,7 +46,7 @@ dev-up:
 		printf "."; sleep 1; \
 	done
 	@echo " ready!"
-	@echo "Swagger UI at http://localhost:8081"
+	@echo "Swagger UI at http://localhost:$(SWAGGER_PORT)"
 
 ## dev-down: stop local dev dependencies
 dev-down:

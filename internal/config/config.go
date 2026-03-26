@@ -25,7 +25,7 @@ type Config struct {
 	// Port is the HTTP listen port (default "8080").
 	Port string
 
-	// Env is the runtime environment: "dev" or "prod".
+	// Env is the runtime environment: "localhost", "dev", or "prod".
 	Env string
 
 	// APIKey is the shared secret required for /api/v1/* routes.
@@ -35,8 +35,11 @@ type Config struct {
 	Hooks HookSecrets
 
 	// DebugPort is the port for the debug/profiling listener (default "6061").
-	// Not exposed via k3s Service — internal diagnostics only.
 	DebugPort string
+
+	// SwaggerPort is the port where Swagger UI is served (default "8081").
+	// Only relevant in dev — used for startup log output.
+	SwaggerPort string
 
 	// Version is the build version tag.
 	Version string
@@ -71,7 +74,7 @@ type Config struct {
 func Load(getenv func(string) string) *Config {
 	return &Config{
 		Port:   envOr(getenv, "PORT", "8080"),
-		Env:    envOr(getenv, "ENV", "dev"),
+		Env:    envOr(getenv, "ENV", "localhost"),
 		APIKey: getenv("API_KEY"),
 		Hooks: HookSecrets{
 			DeboardOrg:      getenv("HOOK_SECRET_DEBOARD_ORG"),
@@ -81,6 +84,7 @@ func Load(getenv func(string) string) *Config {
 			UpdateBandwidth: getenv("HOOK_SECRET_UPDATE_BANDWIDTH"),
 		},
 		DebugPort:   envOr(getenv, "DEBUG_PORT", "6061"),
+		SwaggerPort: envOr(getenv, "SWAGGER_PORT", "8081"),
 		Version:     Version,
 		Commit:      Commit,
 		BuildTime:   BuildTime,

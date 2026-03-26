@@ -45,7 +45,7 @@ func run(
 
 	opts := &slog.HandlerOptions{Level: slog.LevelInfo}
 	var handler slog.Handler = slog.NewJSONHandler(stdout, opts)
-	if cfg.Env == "dev" {
+	if cfg.Env != "prod" {
 		opts.Level = slog.LevelDebug
 		handler = slog.NewTextHandler(stdout, opts)
 	}
@@ -70,7 +70,6 @@ func run(
 	var vcdClient *vcd.Client
 	if cfg.VCDBaseURL != "" {
 		vcdClient = vcd.New(cfg.VCDBaseURL, cfg.VCDVersion, cfg.VCDUser, cfg.VCDPassword, cfg.VCDOrg, logger)
-		logger.Info("vcd client configured", "url", cfg.VCDBaseURL)
 	}
 
 	// Workflow state repository — shared by all workers.
@@ -109,11 +108,12 @@ func run(
 	// Start listeners.
 	serverErr := make(chan error, 1)
 	go func() {
-		logger.Info("server starting", "addr", httpServer.Addr, "env", cfg.Env)
+		logger.Info("server starting", "port", cfg.Port, "env", cfg.Env)
+		logger.Info("swagger ui", "url", "http://localhost:"+cfg.SwaggerPort)
 		serverErr <- httpServer.ListenAndServe()
 	}()
 	go func() {
-		logger.Info("debug server starting", "addr", debugServer.Addr)
+		logger.Info("debug dashboard", "url", "http://localhost:"+cfg.DebugPort+"/debug/dashboard")
 		if err := debugServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logger.Error("debug server error", "err", err)
 		}
